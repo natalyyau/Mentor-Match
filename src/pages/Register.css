@@ -1,0 +1,125 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background-color: #f5f6f8; 
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Page Container */
+.login-container,
+.register-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Academic Card */
+.login-card,
+.register-card {
+  background: white;
+  padding: 60px 50px;
+  width: 440px;
+
+  border: 1px solid #dcdfe4;  
+  border-radius: 2px;         
+  
+  box-shadow: none;           
+}
+
+/* Title */
+.login-title,
+.register-title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 30px;
+  color: #1a2b4c;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+/* Subtitle */
+.login-subtitle,
+.register-subtitle {
+  font-size: 14px;
+  color: #5a6b85;
+  margin-bottom: 35px;
+}
+
+/* Form */
+.login-form,
+.register-form {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Input Groups */
+.input-group {
+  margin-bottom: 22px;
+}
+
+.input-group label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #2f3e5c;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Inputs */
+.input-group input,
+.input-group select {
+  width: 100%;
+  padding: 10px 8px;
+  margin-top: 8px;
+
+  border: none;
+  border-bottom: 1px solid #ccd3dc; 
+  border-radius: 0;
+
+  font-size: 14px;
+  background: transparent;
+}
+
+.input-group input:focus,
+.input-group select:focus {
+  outline: none;
+  border-bottom: 1px solid #1a2b4c;
+}
+
+/* Button */
+.login-button,
+.register-button {
+  margin-top: 20px;
+  padding: 12px;
+
+  background-color: #1a2b4c;
+  color: white;
+
+  border: none;
+  border-radius: 0;   
+  font-weight: 600;
+  letter-spacing: 0.5px;
+
+  cursor: pointer;
+}
+
+.login-button:hover,
+.register-button:hover {
+  background-color: #243a66;
+}
+
+/* Error */
+.error {
+  color: #b00020;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* Footer */
+.footer-text {
+  margin-top: 28px;
+  font-size: 13px;
+  color: #4a5a75;
+  text-align: center;
+}
