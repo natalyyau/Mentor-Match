@@ -1,0 +1,132 @@
+CREATE TABLE Users (
+    userID SERIAL PRIMARY KEY,
+    fullName VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    roleType VARCHAR(20) NOT NULL
+);
+
+CREATE TABLE Department (
+    deptID SERIAL PRIMARY KEY,
+    deptName VARCHAR(255) NOT NULL,
+    collegeName VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE Students (
+    studentID SERIAL PRIMARY KEY,
+    userID INTEGER UNIQUE NOT NULL,
+    major VARCHAR(255) NOT NULL,
+    graduationYear INTEGER NOT NULL,
+    gpa DECIMAL(3,2),
+    deptID INTEGER NOT NULL,
+    
+    
+    FOREIGN KEY (userID) REFERENCES Users(userID) ON DELETE CASCADE,
+    FOREIGN KEY (deptID) REFERENCES Department(deptID)
+);
+
+CREATE TABLE Faculty (
+    userID INTEGER PRIMARY KEY,
+    deptID INTEGER NOT NULL,
+    title VARCHAR(255) NOT NULL,
+
+    FOREIGN KEY (userID) REFERENCES Users(userID) ON DELETE CASCADE,
+    FOREIGN KEY (deptID) REFERENCES Department(deptID)
+);
+
+CREATE TABLE ResearchPostings (
+    postingID SERIAL PRIMARY KEY,
+    facultyID INTEGER NOT NULL,
+    deptID INTEGER NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    prerequisites TEXT,
+    requiredGPA DECIMAL(3,2),
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(50) NOT NULL,
+    deadline DATE NOT NULL,
+
+    FOREIGN KEY (facultyID) REFERENCES Faculty(userID) ON DELETE CASCADE,
+    FOREIGN KEY (deptID) REFERENCES Department(deptID)
+);
+
+CREATE TABLE Applications (
+    applicationID SERIAL PRIMARY KEY,
+    studentID INTEGER NOT NULL,
+    postingID INTEGER NOT NULL,
+    submissionDate DATE NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    prerequisitesVerified BOOLEAN DEFAULT FALSE,
+
+    FOREIGN KEY (studentID) REFERENCES Students(studentID) ON DELETE CASCADE,
+    FOREIGN KEY (postingID) REFERENCES ResearchPostings(postingID) ON DELETE CASCADE
+);
+
+CREATE TABLE Skills (
+    skillID SERIAL PRIMARY KEY,
+    skillName VARCHAR(255) UNIQUE NOT NULL
+);
+
+CREATE TABLE StudentSkills (
+    studentID INTEGER NOT NULL,
+    skillID INTEGER NOT NULL,
+    proficiencyLevel VARCHAR(50),
+
+    PRIMARY KEY (studentID, skillID),
+
+    FOREIGN KEY (studentID) REFERENCES Students(studentID) ON DELETE CASCADE,
+    FOREIGN KEY (skillID) REFERENCES Skills(skillID) ON DELETE CASCADE
+);
+
+
+CREATE TABLE PostingSkills (
+    postingID INTEGER NOT NULL,
+    skillID INTEGER NOT NULL,
+
+    PRIMARY KEY (postingID, skillID),
+
+    FOREIGN KEY (postingID) REFERENCES ResearchPostings(postingID) ON DELETE CASCADE,
+    FOREIGN KEY (skillID) REFERENCES Skills(skillID) ON DELETE CASCADE
+);
+CREATE TABLE Assessments (
+    assessmentID SERIAL PRIMARY KEY,
+    postingID INTEGER NOT NULL,
+    title VARCHAR(255) NOT NULL,
+
+    FOREIGN KEY (postingID) REFERENCES ResearchPostings(postingID) ON DELETE CASCADE
+);
+
+CREATE TABLE Questions (
+    questionID SERIAL PRIMARY KEY,
+    assessmentID INTEGER NOT NULL,
+    questionText TEXT NOT NULL,
+    questionType VARCHAR(50) NOT NULL,
+    correctAnswer TEXT,
+    points INTEGER NOT NULL,
+
+    FOREIGN KEY (assessmentID) REFERENCES Assessments(assessmentID) ON DELETE CASCADE
+);
+
+
+
+CREATE TABLE AssessmentAttempts (
+    attemptID SERIAL PRIMARY KEY,
+    studentID INTEGER NOT NULL,
+    assessmentID INTEGER NOT NULL,
+    score INTEGER NOT NULL,
+    passed BOOLEAN,
+    attemptDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (studentID) REFERENCES Students(studentID) ON DELETE CASCADE,
+    FOREIGN KEY (assessmentID) REFERENCES Assessments(assessmentID) ON DELETE CASCADE
+);
+
+
+
+
+
+
+
+
+
+
