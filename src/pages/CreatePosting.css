@@ -1,0 +1,77 @@
+.create-posting-form {
+  max-width: 800px;
+}
+
+.form-section {
+  background: white;
+  border: 1px solid #dcdfe4;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.form-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a2b4c;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e8ecf2;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 600px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.create-posting-form .input-group {
+  margin-bottom: 20px;
+}
+
+.create-posting-form .input-group:last-child {
+  margin-bottom: 0;
+}
+
+.create-posting-form .input-group label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #2f3e5c;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.create-posting-form .input-group input,
+.create-posting-form .input-group select,
+.create-posting-form .input-group textarea {
+  width: 100%;
+  padding: 10px 8px;
+  margin-top: 8px;
+  border: none;
+  border-bottom: 1px solid #ccd3dc;
+  font-size: 14px;
+  background: transparent;
+}
+
+.create-posting-form .input-group textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.create-posting-form .input-group input:focus,
+.create-posting-form .input-group select:focus,
+.create-posting-form .input-group textarea:focus {
+  outline: none;
+  border-bottom: 1px solid #1a2b4c;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}

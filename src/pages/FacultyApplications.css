@@ -1,0 +1,62 @@
+.faculty-app-stats .stat-card {
+  min-width: 100px;
+}
+
+.faculty-app-toolbar {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.faculty-app-toolbar .filter-select {
+  padding: 10px 14px;
+  border: 1px solid #dcdfe4;
+  font-size: 14px;
+  background: white;
+  min-width: 160px;
+}
+
+.applications-table-wrapper {
+  background: white;
+  border: 1px solid #dcdfe4;
+  overflow-x: auto;
+}
+
+.applications-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.applications-table th,
+.applications-table td {
+  padding: 14px 20px;
+  text-align: left;
+  border-bottom: 1px solid #e8ecf2;
+}
+
+.applications-table th {
+  font-weight: 600;
+  font-size: 12px;
+  color: #5a6b85;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.applications-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.applications-table td {
+  color: #2f3e5c;
+}
+
+.student-name {
+  font-weight: 600;
+  color: #1a2b4c;
+}
+
+.position-cell {
+  max-width: 200px;
+}
