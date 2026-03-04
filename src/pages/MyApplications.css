@@ -1,0 +1,70 @@
+.pipeline-visual {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 28px;
+  padding: 20px;
+  background: white;
+  border: 1px solid #dcdfe4;
+}
+
+.pipeline-step {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+
+.pipeline-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #1a2b4c;
+  flex-shrink: 0;
+}
+
+.pipeline-line {
+  flex: 1;
+  height: 2px;
+  background: #dcdfe4;
+  margin: 0 8px;
+}
+
+.pipeline-label {
+  font-size: 12px;
+  color: #5a6b85;
+  margin-left: 10px;
+  white-space: nowrap;
+}
+
+.app-card .app-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.app-card .app-card-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.assessment-badge {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a2b4c;
+}
+
+.app-card .app-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e8ecf2;
+}
