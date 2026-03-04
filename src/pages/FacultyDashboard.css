@@ -1,0 +1,74 @@
+.view-all-link {
+  font-size: 13px;
+  color: #1a2b4c;
+  text-decoration: underline;
+  margin-left: auto;
+}
+
+.dashboard-section-header {
+  display: flex;
+  align-items: center;
+}
+
+.faculty-posting-card .posting-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.faculty-posting-card .posting-stats {
+  font-size: 13px;
+  color: #5a6b85;
+  margin-top: 4px;
+}
+
+.faculty-posting-card .posting-meta {
+  font-size: 13px;
+  color: #5a6b85;
+  margin-bottom: 12px;
+}
+
+.faculty-posting-card .posting-actions .btn {
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+.recent-app-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #e8ecf2;
+}
+
+.recent-app-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.recent-app-row:first-child {
+  padding-top: 0;
+}
+
+.recent-app-name {
+  font-weight: 600;
+  color: #1a2b4c;
+}
+
+.recent-app-date {
+  font-size: 12px;
+  color: #5a6b85;
+  margin-top: 2px;
+}
+
+.recent-app-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}

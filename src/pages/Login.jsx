@@ -24,7 +24,7 @@ function Login() {
     }
     setError("");
     console.log("Login submitted:", formData);
-    alert("Login successful (mock)!");
+    navigate("/student/dashboard");
   };
 
   return (
