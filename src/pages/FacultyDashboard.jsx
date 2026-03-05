@@ -1,10 +1,10 @@
-import { useOutletContext } from "react-router-dom";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import "./Dashboard.css";
 import "./FacultyDashboard.css";
 
 function FacultyDashboard() {
-  const { userName = "Sarah Smith" } = useOutletContext() || {};
+  const userName = localStorage.getItem("fullName") || "Faculty";
   const displayName = userName.includes("Dr.") ? userName : `Dr. ${userName}`;
 
   const stats = [

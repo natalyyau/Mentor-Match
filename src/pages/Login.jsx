@@ -16,15 +16,42 @@ function Login() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!formData.email || !formData.password) {
       setError("Please enter both email and password.");
       return;
     }
-    setError("");
-    console.log("Login submitted:", formData);
-    navigate("/student/dashboard");
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/login/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // ← Save user info to localStorage
+        localStorage.setItem("fullName", data.fullName);
+        localStorage.setItem("userID", data.userID);
+        localStorage.setItem("role", data.role);
+
+        if (data.role === "faculty") {
+          navigate("/faculty/dashboard");
+        } else {
+          navigate("/student/dashboard");
+        }
+      } else {
+        setError(data.error || "Login failed");
+      }
+
+    } catch (err) {
+      console.error(err);
+      setError("Server error. Try again later.");
+    }
   };
 
   return (
@@ -67,11 +94,7 @@ function Login() {
           New to Mentor Match?{" "}
           <span
             onClick={() => navigate("/register")}
-            style={{
-              color: "#1a2b4c",
-              cursor: "pointer",
-              textDecoration: "underline"
-            }}
+            style={{ color: "#1a2b4c", cursor: "pointer", textDecoration: "underline" }}
           >
             Create an account
           </span>.
