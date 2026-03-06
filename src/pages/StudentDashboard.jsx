@@ -2,7 +2,8 @@ import { useOutletContext } from "react-router-dom";
 import "./Dashboard.css";
 
 function StudentDashboard() {
-  const { userName = "Tim Drake" } = useOutletContext() || {};
+  const userName = localStorage.getItem("fullName") || "Student";
+  
   const stats = [
     { label: "Available Opportunities", value: "12" },
     { label: "Applications Submitted", value: "3" },
