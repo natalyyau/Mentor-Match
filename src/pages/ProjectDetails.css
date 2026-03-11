@@ -1,0 +1,109 @@
+.project-details-page {
+  max-width: 720px;
+}
+
+.back-link {
+  background: none;
+  border: none;
+  color: #1a2b4c;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 24px;
+  text-decoration: underline;
+}
+
+.back-link:hover {
+  color: #243a66;
+}
+
+.project-details-card {
+  background: white;
+  border: 1px solid #dcdfe4;
+  padding: 32px;
+}
+
+.project-details-title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 26px;
+  color: #1a2b4c;
+  margin: 0 0 8px 0;
+  letter-spacing: 0.5px;
+}
+
+.project-details-meta {
+  font-size: 14px;
+  color: #5a6b85;
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e8ecf2;
+}
+
+.project-details-section {
+  margin-bottom: 28px;
+}
+
+.section-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2f3e5c;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 12px 0;
+}
+
+.project-description {
+  font-size: 15px;
+  color: #2f3e5c;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.skills-list .skill-tag {
+  padding: 8px 14px;
+  font-size: 14px;
+  background: #1a2b4c;
+  color: white;
+}
+
+.project-details-footer {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e8ecf2;
+}
+
+.apply-btn {
+  padding: 14px 32px;
+  font-size: 15px;
+}
+
+.apply-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.apply-btn.applied {
+  background: #2e7d32;
+}
+
+.apply-btn.applied:hover {
+  background: #2e7d32;
+}
+
+.apply-confirmation {
+  color: #2e7d32;
+  font-size: 14px;
+  margin: 0 0 12px 0;
+}
+
+.apply-error {
+  color: #b00020;
+  font-size: 14px;
+  margin: 0 0 12px 0;
+}
