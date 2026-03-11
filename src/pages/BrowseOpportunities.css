@@ -1,3 +1,11 @@
+/* Above: Search & Filters section */
+.browse-above {
+  background: white;
+  border: 1px solid #dcdfe4;
+  padding: 24px;
+  margin-bottom: 28px;
+}
+
 .browse-page .filter-bar {
   display: flex;
   gap: 16px;
@@ -17,6 +25,11 @@
   border: 1px solid #dcdfe4;
   font-size: 14px;
   background: white;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: #1a2b4c;
 }
 
 .filter-input::placeholder {
@@ -41,7 +54,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .category-tag {
@@ -50,16 +63,101 @@
   background: #e8ecf2;
   color: #2f3e5c;
   cursor: pointer;
+  transition: background 0.15s, color 0.15s;
 }
 
 .category-tag:hover {
   background: #d4dce8;
 }
 
+.category-tag.active {
+  background: #1a2b4c;
+  color: white;
+}
+
 .results-count {
   font-size: 13px;
   color: #5a6b85;
-  margin-bottom: 16px;
+}
+
+/* Projects card grid layout */
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.project-card {
+  background: white;
+  border: 1px solid #dcdfe4;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.project-card:hover {
+  border-color: #1a2b4c;
+  box-shadow: 0 4px 12px rgba(26, 43, 76, 0.08);
+}
+
+.project-card-body {
+  padding: 24px;
+  flex: 1;
+}
+
+.project-card-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1a2b4c;
+  margin: 0 0 8px 0;
+  line-height: 1.3;
+}
+
+.project-card-meta {
+  font-size: 13px;
+  color: #5a6b85;
+  margin-bottom: 12px;
+}
+
+.project-card-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.project-card-desc {
+  font-size: 14px;
+  color: #4a5a75;
+  line-height: 1.5;
+  margin: 0 0 12px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.project-card-duration {
+  font-size: 12px;
+  color: #5a6b85;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.project-card-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e8ecf2;
+}
+
+.project-view-btn {
+  width: 100%;
+}
+
+.skill-tag {
+  padding: 4px 10px;
+  font-size: 12px;
+  background: #1a2b4c;
+  color: white;
 }
 
 .browse-card .card-skills {
@@ -68,13 +166,6 @@
   gap: 8px;
   align-items: center;
   margin-bottom: 10px;
-}
-
-.skill-tag {
-  padding: 4px 10px;
-  font-size: 12px;
-  background: #1a2b4c;
-  color: white;
 }
 
 .skill-label {

@@ -34,11 +34,16 @@ function Login() {
       const data = await response.json();
 
       if (response.ok) {
-        // ← Save user info to localStorage
         localStorage.setItem("fullName", data.fullName);
-        localStorage.setItem("userID", data.userID);
+        localStorage.setItem("userID", String(data.userID));
         localStorage.setItem("role", data.role);
 
+        const returnTo = localStorage.getItem("returnAfterLogin");
+        if (returnTo) {
+          localStorage.removeItem("returnAfterLogin");
+          navigate(returnTo);
+          return;
+        }
         if (data.role === "faculty") {
           navigate("/faculty/dashboard");
         } else {

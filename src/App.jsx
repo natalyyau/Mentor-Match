@@ -4,6 +4,7 @@ import Register from "./pages/Register";
 import Layout from "./components/Layout";
 import StudentDashboard from "./pages/StudentDashboard";
 import BrowseOpportunities from "./pages/BrowseOpportunities";
+import ProjectDetails from "./pages/ProjectDetails";
 import MyApplications from "./pages/MyApplications";
 import FacultyDashboard from "./pages/FacultyDashboard";
 import CreatePosting from "./pages/CreatePosting";
@@ -26,6 +27,7 @@ function App() {
           <Route index element={<Navigate to="/student/dashboard" replace />} />
           <Route path="dashboard" element={<StudentDashboard />} />
           <Route path="browse" element={<BrowseOpportunities />} />
+          <Route path="project/:id" element={<ProjectDetails />} />
           <Route path="applications" element={<MyApplications />} />
         </Route>
 
