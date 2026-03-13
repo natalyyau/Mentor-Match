@@ -29,6 +29,10 @@ def register(request):
 @api_view(['POST'])
 def login(request):
     data = request.data
+
+    if not data.get('email') or not data.get('password'):
+        return Response({"error": "Email and password are required"}, status=400)
+    
     try:
         user = Users.objects.get(email=data['email'])
         if check_password(data['password'], user.password):
