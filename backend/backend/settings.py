@@ -76,7 +76,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'mentor-match',      # your database name in DBeaver
         'USER': 'postgres',         # default postgres username
-        'PASSWORD': 'InstsertYourPasswordHere', # the password you set when installing PostgreSQL
+        'PASSWORD': 'password', # the password you set when installing PostgreSQL
         'HOST': 'localhost',
         'PORT': '5432',
     }
