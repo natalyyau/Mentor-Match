@@ -1,3 +1,12 @@
+.faculty-app-project-banner {
+  background: #e8ecf2;
+  border: 1px solid #dcdfe4;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: #2f3e5c;
+}
+
 .faculty-app-stats .stat-card {
   min-width: 100px;
 }
@@ -59,4 +68,132 @@
 
 .position-cell {
   max-width: 200px;
+}
+
+.student-email {
+  display: block;
+  font-size: 12px;
+  color: #5a6b85;
+  font-weight: 400;
+  margin-top: 4px;
+}
+
+.skills-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.skill-pill {
+  font-size: 11px;
+  padding: 3px 8px;
+  background: #e8ecf2;
+  color: #2f3e5c;
+}
+
+.skills-more {
+  font-size: 12px;
+  color: #5a6b85;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  color: #1a2b4c;
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.link-btn:hover {
+  color: #243a66;
+}
+
+.app-status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 0;
+}
+
+.app-status-badge.status-new {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.app-status-badge.status-review {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.app-status-badge.status-shortlisted {
+  background: #f3e5f5;
+  color: #6a1b9a;
+}
+
+.app-status-badge.status-accepted {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.app-status-badge.status-rejected {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.applicants-empty {
+  background: white;
+  border: 1px solid #dcdfe4;
+  padding: 32px;
+  text-align: center;
+  color: #5a6b85;
+  font-size: 14px;
+}
+
+.skills-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 43, 76, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.skills-modal {
+  background: white;
+  border: 1px solid #dcdfe4;
+  max-width: 420px;
+  width: 100%;
+  padding: 28px;
+}
+
+.skills-modal-title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  color: #1a2b4c;
+  margin: 0 0 8px 0;
+}
+
+.skills-modal-meta {
+  font-size: 13px;
+  color: #5a6b85;
+  margin: 0 0 20px 0;
+}
+
+.skills-modal-list {
+  margin: 0 0 24px 0;
+  padding-left: 20px;
+  color: #2f3e5c;
+  line-height: 1.7;
+}
+
+.skills-modal-close {
+  width: 100%;
 }

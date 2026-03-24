@@ -9,9 +9,9 @@ const STUDENT_NAV = [
 
 const FACULTY_NAV = [
   { path: "/faculty/dashboard", label: "Dashboard" },
-  { path: "/faculty/create-posting", label: "Create Posting" },
-  { path: "/faculty/my-postings", label: "My Posting" },
-  { path: "/faculty/applications", label: "Application" },
+  { path: "/faculty/create-posting", label: "Create Project" },
+  { path: "/faculty/my-postings", label: "My Projects" },
+  { path: "/faculty/applications", label: "Applicant List" },
 ];
 
 function Layout({ userRole: propRole, userName: propName }) {
