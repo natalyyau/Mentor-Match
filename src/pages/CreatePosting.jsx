@@ -1,263 +1,172 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import {
+  addFacultyProject,
+  updateFacultyProject,
+  getFacultyProjectById,
+} from "../utils/facultyProjectsStorage";
 import "./Dashboard.css";
 import "./CreatePosting.css";
 
-function CreatePosting() {
-  const [formData, setFormData] = useState({
-    positionTitle: "",
-    department: "",
-    compensation: "",
-    compensationType: "",
-    compensationDetail: "",
-    researchArea: "",
-    startDate: "",
-    endDate: "",
-    overview: "",
-    detailedDescription: "",
-    numPositions: "",
-    requiredSkills: "",
-    minGpa: "",
-    requiredCourses: "",
-    additionalRequirements: "",
-    assessmentType: "",
-    applicationDeadline: "",
-    timeLimit: "",
-    passingScore: "",
-  });
+const AVAILABLE_SKILLS = [
+  "Python",
+  "Java",
+  "C++",
+  "R",
+  "Machine Learning",
+  "Statistics",
+  "Data Analysis",
+  "Natural Language Processing",
+  "Computer Vision",
+  "Research Writing",
+  "Linear Algebra",
+  "Physics",
+  "Biology",
+  "Chemistry",
+];
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+function CreatePosting() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const editId = searchParams.get("edit");
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedSkills, setSelectedSkills] = useState([]);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    if (!editId) return;
+    const existing = getFacultyProjectById(editId);
+    if (existing) {
+      setTitle(existing.title);
+      setDescription(existing.description);
+      setSelectedSkills(existing.skills || []);
+    }
+  }, [editId]);
+
+  const toggleSkill = (skill) => {
+    setSelectedSkills((prev) =>
+      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
+    );
+    setError("");
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!title.trim()) {
+      setError("Please enter a project title.");
+      return;
+    }
+    if (!description.trim()) {
+      setError("Please enter a description.");
+      return;
+    }
+    if (selectedSkills.length === 0) {
+      setError("Select at least one required skill.");
+      return;
+    }
+
+    const payload = {
+      title: title.trim(),
+      description: description.trim(),
+      skills: selectedSkills,
+    };
+
+    if (editId && getFacultyProjectById(editId)) {
+      updateFacultyProject(editId, payload);
+      setSuccess("Project updated successfully.");
+      setSearchParams({});
+    } else {
+      addFacultyProject(payload);
+      setSuccess("Project created successfully.");
+      setTitle("");
+      setDescription("");
+      setSelectedSkills([]);
+    }
   };
 
   return (
-    <div className="dashboard-page create-posting-page">
-      <h1 className="dashboard-title">Create Research Posting</h1>
+    <div className="dashboard-page create-posting-page create-project-page">
+      <h1 className="dashboard-title">
+        {editId ? "Edit Project" : "Create Project"}
+      </h1>
       <p className="dashboard-subtitle">
-        Fill out the details for your research opportunity
+        {editId
+          ? "Update your research opportunity"
+          : "Add a new research opportunity for students"}
       </p>
 
-      <form className="create-posting-form" onSubmit={(e) => e.preventDefault()}>
+      <form className="create-project-form" onSubmit={handleSubmit}>
         <div className="form-section">
-          <h3 className="form-section-title">Basic Information</h3>
-          <div className="form-row">
-            <div className="input-group">
-              <label>Position Title</label>
-              <input
-                name="positionTitle"
-                value={formData.positionTitle}
-                onChange={handleChange}
-                placeholder="e.g. Machine Learning Research Assistant"
-              />
-            </div>
-            <div className="input-group">
-              <label>Department</label>
-              <input
-                name="department"
-                value={formData.department}
-                onChange={handleChange}
-                placeholder="e.g. Computer Science"
-              />
+          <div className="input-group">
+            <label htmlFor="project-title">Title</label>
+            <input
+              id="project-title"
+              type="text"
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setError("");
+              }}
+              placeholder="e.g. Machine Learning Research Assistant"
+              maxLength={200}
+            />
+          </div>
+
+          <div className="input-group">
+            <label htmlFor="project-description">Description</label>
+            <textarea
+              id="project-description"
+              value={description}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setError("");
+              }}
+              placeholder="Describe the project, responsibilities, and expectations for students."
+              rows={8}
+            />
+          </div>
+
+          <div className="input-group skills-field">
+            <label>Required skills</label>
+            <p className="skills-hint">Select all skills students should have.</p>
+            <div className="skill-select-grid" role="group" aria-label="Required skills">
+              {AVAILABLE_SKILLS.map((skill) => (
+                <button
+                  key={skill}
+                  type="button"
+                  className={`skill-chip ${selectedSkills.includes(skill) ? "selected" : ""}`}
+                  onClick={() => toggleSkill(skill)}
+                  aria-pressed={selectedSkills.includes(skill)}
+                >
+                  {skill}
+                </button>
+              ))}
             </div>
           </div>
-          <div className="form-row">
-            <div className="input-group">
-              <label>Compensation</label>
-              <input
-                name="compensation"
-                value={formData.compensation}
-                onChange={handleChange}
-                placeholder="e.g. $15/hr"
-              />
-            </div>
-            <div className="input-group">
-              <label>Compensation Type</label>
-              <select
-                name="compensationType"
-                value={formData.compensationType}
-                onChange={handleChange}
+
+          {error && <p className="create-project-error">{error}</p>}
+          {success && <p className="create-project-success">{success}</p>}
+
+          <div className="form-actions create-project-actions">
+            <button type="submit" className="btn">
+              {editId ? "Save changes" : "Submit"}
+            </button>
+            {editId && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => navigate("/faculty/my-postings")}
               >
-                <option value="">Select type</option>
-                <option value="hourly">Hourly</option>
-                <option value="stipend">Stipend</option>
-                <option value="credit">Credit</option>
-                <option value="volunteer">Volunteer</option>
-              </select>
-            </div>
+                Cancel
+              </button>
+            )}
           </div>
-          <div className="input-group">
-            <label>Compensation Detail</label>
-            <input
-              name="compensationDetail"
-              value={formData.compensationDetail}
-              onChange={handleChange}
-              placeholder="Additional compensation details"
-            />
-          </div>
-          <div className="input-group">
-            <label>Research Area</label>
-            <input
-              name="researchArea"
-              value={formData.researchArea}
-              onChange={handleChange}
-              placeholder="e.g. Machine Learning, NLP"
-            />
-          </div>
-        </div>
-
-        <div className="form-section">
-          <h3 className="form-section-title">Position Details</h3>
-          <div className="form-row">
-            <div className="input-group">
-              <label>Start Date</label>
-              <input
-                type="date"
-                name="startDate"
-                value={formData.startDate}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="input-group">
-              <label>End Date</label>
-              <input
-                type="date"
-                name="endDate"
-                value={formData.endDate}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-          <div className="input-group">
-            <label>Overview</label>
-            <textarea
-              name="overview"
-              value={formData.overview}
-              onChange={handleChange}
-              placeholder="Brief overview of the position"
-              rows={2}
-            />
-          </div>
-          <div className="input-group">
-            <label>Detailed Description</label>
-            <textarea
-              name="detailedDescription"
-              value={formData.detailedDescription}
-              onChange={handleChange}
-              placeholder="Full description of responsibilities and expectations"
-              rows={4}
-            />
-          </div>
-          <div className="input-group">
-            <label>Number of Positions</label>
-            <input
-              type="number"
-              name="numPositions"
-              value={formData.numPositions}
-              onChange={handleChange}
-              placeholder="e.g. 2"
-              min="1"
-            />
-          </div>
-        </div>
-
-        <div className="form-section">
-          <h3 className="form-section-title">Requirements and Prerequisites</h3>
-          <div className="input-group">
-            <label>Required Skills</label>
-            <input
-              name="requiredSkills"
-              value={formData.requiredSkills}
-              onChange={handleChange}
-              placeholder="e.g. Python, Statistics"
-            />
-          </div>
-          <div className="input-group">
-            <label>Minimum GPA</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              max="4"
-              name="minGpa"
-              value={formData.minGpa}
-              onChange={handleChange}
-              placeholder="e.g. 3.0"
-            />
-          </div>
-          <div className="input-group">
-            <label>Required Courses</label>
-            <input
-              name="requiredCourses"
-              value={formData.requiredCourses}
-              onChange={handleChange}
-              placeholder="e.g. CS 101, MATH 200"
-            />
-          </div>
-          <div className="input-group">
-            <label>Additional Requirements</label>
-            <textarea
-              name="additionalRequirements"
-              value={formData.additionalRequirements}
-              onChange={handleChange}
-              placeholder="Any other requirements"
-              rows={2}
-            />
-          </div>
-        </div>
-
-        <div className="form-section">
-          <h3 className="form-section-title">Technical Assessment</h3>
-          <div className="input-group">
-            <label>Create or Select Assessment Question</label>
-            <input
-              name="assessmentType"
-              value={formData.assessmentType}
-              onChange={handleChange}
-              placeholder="Assessment configuration"
-            />
-          </div>
-        </div>
-
-        <div className="form-section">
-          <h3 className="form-section-title">Application Settings</h3>
-          <div className="form-row">
-            <div className="input-group">
-              <label>Application Deadline</label>
-              <input
-                type="date"
-                name="applicationDeadline"
-                value={formData.applicationDeadline}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="input-group">
-              <label>Time Limit (minutes)</label>
-              <input
-                type="number"
-                name="timeLimit"
-                value={formData.timeLimit}
-                onChange={handleChange}
-                placeholder="e.g. 60"
-              />
-            </div>
-            <div className="input-group">
-              <label>Passing Score (%)</label>
-              <input
-                type="number"
-                name="passingScore"
-                value={formData.passingScore}
-                onChange={handleChange}
-                placeholder="e.g. 70"
-                min="0"
-                max="100"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="form-actions">
-          <button type="submit" className="btn">Publish Posting</button>
-          <button type="button" className="btn btn-outline">Save Draft</button>
-          <button type="button" className="btn btn-outline">Preview</button>
         </div>
       </form>
     </div>
