@@ -59,6 +59,13 @@
   color: #1a2b4c;
 }
 
+.applications-loading,
+.applications-empty {
+  color: #5a6b85;
+  font-size: 14px;
+  margin: 0;
+}
+
 .app-card .app-card-footer {
   display: flex;
   justify-content: space-between;

@@ -75,3 +75,94 @@
   gap: 12px;
   margin-top: 24px;
 }
+
+/* Create Project (professor) */
+.create-project-page .create-project-form {
+  max-width: 800px;
+}
+
+.create-project-form .input-group input,
+.create-project-form .input-group textarea {
+  width: 100%;
+  padding: 10px 8px;
+  margin-top: 8px;
+  border: none;
+  border-bottom: 1px solid #ccd3dc;
+  font-size: 14px;
+  background: transparent;
+  box-sizing: border-box;
+}
+
+.create-project-form .input-group textarea {
+  resize: vertical;
+  min-height: 160px;
+}
+
+.create-project-form .input-group input:focus,
+.create-project-form .input-group textarea:focus {
+  outline: none;
+  border-bottom: 1px solid #1a2b4c;
+}
+
+.create-project-form .input-group label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #2f3e5c;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.create-project-page .form-section {
+  margin-bottom: 0;
+}
+
+.skills-field .skills-hint {
+  font-size: 13px;
+  color: #5a6b85;
+  margin: 4px 0 12px 0;
+}
+
+.skill-select-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.skill-chip {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid #ccd3dc;
+  background: white;
+  color: #2f3e5c;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.skill-chip:hover {
+  border-color: #1a2b4c;
+  color: #1a2b4c;
+}
+
+.skill-chip.selected {
+  background: #1a2b4c;
+  border-color: #1a2b4c;
+  color: white;
+}
+
+.create-project-error {
+  color: #b00020;
+  font-size: 14px;
+  margin: 16px 0 0 0;
+}
+
+.create-project-success {
+  color: #2e7d32;
+  font-size: 14px;
+  margin: 16px 0 0 0;
+}
+
+.create-project-actions {
+  margin-top: 24px;
+}
