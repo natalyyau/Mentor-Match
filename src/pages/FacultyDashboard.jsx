@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import "./Dashboard.css";
 import "./FacultyDashboard.css";
@@ -80,8 +79,8 @@ function FacultyDashboard() {
           <div className="dashboard-section">
             <div className="dashboard-section-header">Recent Application</div>
             <div className="dashboard-section-body">
-              {recentApplications.map((app, i) => (
-                <div key={i} className="recent-app-row">
+              {recentApplications.map((app) => (
+                <div key={app.name} className="recent-app-row">
                   <div>
                     <div className="recent-app-name">{app.name}</div>
                     <div className="recent-app-date">{app.date}</div>

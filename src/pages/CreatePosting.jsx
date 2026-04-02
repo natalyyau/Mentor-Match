@@ -1,12 +1,9 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import {
-  addFacultyProject,
-  updateFacultyProject,
-  getFacultyProjectById,
-} from "../utils/facultyProjectsStorage";
 import "./Dashboard.css";
 import "./CreatePosting.css";
+
+const API_BASE = "http://127.0.0.1:8000/api";
 
 const AVAILABLE_SKILLS = [
   "Python",
@@ -26,9 +23,10 @@ const AVAILABLE_SKILLS = [
 ];
 
 function CreatePosting() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const editId = searchParams.get("edit");
+  const userID = localStorage.getItem("userID");
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -38,12 +36,21 @@ function CreatePosting() {
 
   useEffect(() => {
     if (!editId) return;
-    const existing = getFacultyProjectById(editId);
-    if (existing) {
-      setTitle(existing.title);
-      setDescription(existing.description);
-      setSelectedSkills(existing.skills || []);
-    }
+    const fetchExisting = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/opportunities/${editId}/`);
+        const data = await res.json();
+        if (res.ok && data.opportunity) {
+          setTitle(data.opportunity.title || "");
+          setDescription(data.opportunity.description || "");
+          setSelectedSkills(Array.isArray(data.opportunity.skills) ? data.opportunity.skills : []);
+        }
+      } catch {
+        // Keep the form empty if fetch fails
+      }
+    };
+
+    fetchExisting();
   }, [editId]);
 
   const toggleSkill = (skill) => {
@@ -53,7 +60,7 @@ function CreatePosting() {
     setError("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -71,22 +78,39 @@ function CreatePosting() {
       return;
     }
 
+    if (!userID) {
+      setError("Please log in as faculty to create postings.");
+      return;
+    }
+
     const payload = {
+      userID: Number.parseInt(userID, 10),
       title: title.trim(),
       description: description.trim(),
       skills: selectedSkills,
     };
 
-    if (editId && getFacultyProjectById(editId)) {
-      updateFacultyProject(editId, payload);
-      setSuccess("Project updated successfully.");
-      setSearchParams({});
-    } else {
-      addFacultyProject(payload);
-      setSuccess("Project created successfully.");
-      setTitle("");
-      setDescription("");
-      setSelectedSkills([]);
+    try {
+      if (editId) {
+        payload.postingID = Number.parseInt(editId, 10);
+      }
+
+      const res = await fetch(`${API_BASE}/opportunities/create/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to save opportunity.");
+        return;
+      }
+
+      setSuccess(editId ? "Project updated successfully." : "Project created successfully.");
+      navigate("/faculty/my-postings");
+    } catch {
+      setError("Unable to connect. Please try again later.");
     }
   };
 
@@ -132,10 +156,10 @@ function CreatePosting() {
             />
           </div>
 
-          <div className="input-group skills-field">
-            <label>Required skills</label>
+          <fieldset className="input-group skills-field">
+            <legend>Required skills</legend>
             <p className="skills-hint">Select all skills students should have.</p>
-            <div className="skill-select-grid" role="group" aria-label="Required skills">
+            <div className="skill-select-grid">
               {AVAILABLE_SKILLS.map((skill) => (
                 <button
                   key={skill}
@@ -148,7 +172,7 @@ function CreatePosting() {
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
 
           {error && <p className="create-project-error">{error}</p>}
           {success && <p className="create-project-success">{success}</p>}
