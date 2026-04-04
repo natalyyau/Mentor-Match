@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { MOCK_PROJECTS } from "../data/mockProjects";
 import "./Dashboard.css";
 import "./ProjectDetails.css";
 
@@ -9,7 +8,7 @@ const API_BASE = "http://127.0.0.1:8000/api";
 function ProjectDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const project = MOCK_PROJECTS.find((p) => p.id === parseInt(id, 10));
+  const [project, setProject] = useState(null);
 
   const [applied, setApplied] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -17,6 +16,21 @@ function ProjectDetails() {
   const [confirmMessage, setConfirmMessage] = useState("");
 
   const userID = localStorage.getItem("userID");
+
+  useEffect(() => {
+    const fetchProject = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/opportunities/${id}/`);
+        const data = await res.json();
+        if (res.ok) setProject(data.opportunity || null);
+        else setProject(null);
+      } catch {
+        setProject(null);
+      }
+    };
+
+    fetchProject();
+  }, [id]);
 
   useEffect(() => {
     const checkApplied = async () => {
@@ -28,9 +42,7 @@ function ProjectDetails() {
         const data = await res.json();
         if (data.applied) setApplied(true);
       } catch {
-        const local = localStorage.getItem("appliedProjects") || "[]";
-        const ids = JSON.parse(local);
-        if (ids.includes(project.id)) setApplied(true);
+        // If this check fails, we just leave "applied" as false.
       }
     };
     checkApplied();
@@ -62,13 +74,12 @@ function ProjectDetails() {
       if (res.ok) {
         setApplied(true);
         setConfirmMessage("Your application has been submitted successfully.");
-        const local = JSON.parse(localStorage.getItem("appliedProjects") || "[]");
-        if (!local.includes(project.id)) {
-          localStorage.setItem("appliedProjects", JSON.stringify([...local, project.id]));
-        }
       } else {
         if (data.error?.includes("already applied")) {
           setApplied(true);
+          setError("");
+          setConfirmMessage("You have already applied to this opportunity.");
+          return;
         }
         setError(data.error || "Failed to submit application.");
       }

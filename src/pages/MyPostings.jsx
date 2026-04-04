@@ -1,11 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  getFacultyProjects,
-  deleteFacultyProject,
-} from "../utils/facultyProjectsStorage";
 import "./Dashboard.css";
 import "./MyPostings.css";
+
+const API_BASE = "http://127.0.0.1:8000/api";
 
 function formatDate(isoStr) {
   if (!isoStr) return "";
@@ -19,24 +17,38 @@ function formatDate(isoStr) {
 function MyPostings() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
+  const userID = localStorage.getItem("userID");
 
   const refresh = useCallback(() => {
-    setProjects(getFacultyProjects());
-  }, []);
+    const fetchPostings = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/my-postings/?userID=${userID}`);
+        const data = await res.json();
+        setProjects(Array.isArray(data.postings) ? data.postings : []);
+      } catch {
+        setProjects([]);
+      }
+    };
+
+    fetchPostings();
+  }, [userID]);
 
   useEffect(() => {
     refresh();
-    const onStorage = (e) => {
-      if (e.key === "facultyProjects" || e.key === null) refresh();
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
   }, [refresh]);
 
-  const handleDelete = (id, title) => {
-    if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
-    deleteFacultyProject(id);
-    refresh();
+  const handleDelete = async (id, title) => {
+    if (!globalThis.confirm(`Delete "${title}"? This cannot be undone.`)) return;
+
+    try {
+      await fetch(`${API_BASE}/opportunities/delete/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userID, postingID: id }),
+      });
+    } finally {
+      refresh();
+    }
   };
 
   const total = projects.length;

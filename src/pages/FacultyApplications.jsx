@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { getFacultyProjectById } from "../utils/facultyProjectsStorage";
 import "./Dashboard.css";
 import "./FacultyApplications.css";
+
+const API_BASE = "http://127.0.0.1:8000/api";
 
 const STATUS_STYLES = {
   New: "status-new",
@@ -12,75 +13,85 @@ const STATUS_STYLES = {
   Rejected: "status-rejected",
 };
 
-const MOCK_APPLICANTS = [
-  {
-    id: 1,
-    student: "Tim Drake",
-    email: "tdrake@university.edu",
-    position: "Machine Learning Research Assistant",
-    skills: ["Python", "Statistics", "TensorFlow", "Research Writing"],
-    assessment: 100,
-    gpa: 4.0,
-    appliedDate: "Apr 27, 2025",
-    status: "New",
-  },
-  {
-    id: 2,
-    student: "Percy Jackson",
-    email: "pjackson@university.edu",
-    position: "Machine Learning Research Assistant",
-    skills: ["Python", "Data Analysis", "Linear Algebra"],
-    assessment: 67,
-    gpa: 3.2,
-    appliedDate: "Apr 27, 2025",
-    status: "Under Review",
-  },
-  {
-    id: 3,
-    student: "Annabeth Chase",
-    email: "achase@university.edu",
-    position: "Quantum Computing Simulation",
-    skills: ["C++", "Physics", "Python", "Linear Algebra", "Research Writing"],
-    assessment: 88,
-    gpa: 3.85,
-    appliedDate: "Apr 22, 2025",
-    status: "Shortlisted",
-  },
-  {
-    id: 4,
-    student: "Grover Underwood",
-    email: "gunderwood@university.edu",
-    position: "Data Visualization for Genomics",
-    skills: ["R", "Statistics", "Python"],
-    assessment: 72,
-    gpa: 3.5,
-    appliedDate: "Apr 18, 2025",
-    status: "Accepted",
-  },
-  {
-    id: 5,
-    student: "Nico di Angelo",
-    email: "ndangelo@university.edu",
-    position: "NLP for Clinical Notes",
-    skills: ["Python", "Natural Language Processing"],
-    assessment: 45,
-    gpa: 3.0,
-    appliedDate: "Apr 10, 2025",
-    status: "Rejected",
-  },
-];
+const STATUS_OPTIONS = ["New", "Under Review", "Shortlisted", "Accepted", "Rejected"];
 
 function FacultyApplications() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const projectId = searchParams.get("projectId");
-  const project = projectId ? getFacultyProjectById(projectId) : null;
+  const userID = localStorage.getItem("userID");
 
   const [skillsModal, setSkillsModal] = useState(null);
+  const [applicants, setApplicants] = useState([]);
+  const [facultyPostings, setFacultyPostings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [statusMessage, setStatusMessage] = useState("");
 
-  const applicants = MOCK_APPLICANTS.filter((a) => {
-    if (!project) return true;
-    return a.position === project.title;
-  });
+  useEffect(() => {
+    const fetchPostings = async () => {
+      if (!userID) return;
+      try {
+        const res = await fetch(`${API_BASE}/my-postings/?userID=${userID}`);
+        const data = await res.json();
+        setFacultyPostings(Array.isArray(data.postings) ? data.postings : []);
+      } catch {
+        setFacultyPostings([]);
+      }
+    };
+
+    fetchPostings();
+  }, [userID]);
+
+  useEffect(() => {
+    const fetchApplicants = async () => {
+      if (!userID) {
+        setApplicants([]);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const url = projectId
+          ? `${API_BASE}/faculty-applications/?userID=${userID}&projectId=${projectId}`
+          : `${API_BASE}/faculty-applications/?userID=${userID}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        setApplicants(Array.isArray(data.applications) ? data.applications : []);
+      } catch {
+        setApplicants([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchApplicants();
+  }, [userID, projectId]);
+
+  const project = facultyPostings.find((p) => String(p.id) === String(projectId)) || null;
+
+  const handleStatusChange = async (applicationId, nextStatus) => {
+    setStatusMessage("");
+    try {
+      const res = await fetch(`${API_BASE}/faculty-applications/status/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userID: Number.parseInt(userID, 10),
+          applicationId,
+          status: nextStatus,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatusMessage(data.error || "Could not update status.");
+        return;
+      }
+      setApplicants((prev) => prev.map((app) => (app.applicationId === applicationId ? { ...app, status: nextStatus } : app)));
+      setStatusMessage("Application status updated.");
+    } catch {
+      setStatusMessage("Could not update status.");
+    }
+  };
 
   const statusCounts = applicants.reduce((acc, a) => {
     acc[a.status] = (acc[a.status] || 0) + 1;
@@ -99,15 +110,15 @@ function FacultyApplications() {
   return (
     <div className="dashboard-page faculty-applicants-page">
       <h1 className="dashboard-title">Applicant List</h1>
-      <p className="dashboard-subtitle">
-        Students who applied to your projects — view skills and application status
-      </p>
+      <p className="dashboard-subtitle">Students who applied to your projects — view skills and update application status</p>
 
       {project && (
         <div className="faculty-app-project-banner">
           Filtering by project: <strong>{project.title}</strong>
         </div>
       )}
+
+      {statusMessage && <div className="faculty-app-project-banner">{statusMessage}</div>}
 
       <div className="stats-row faculty-app-stats">
         {stats.map((s) => (
@@ -119,18 +130,21 @@ function FacultyApplications() {
       </div>
 
       <div className="faculty-app-toolbar">
-        <select className="filter-select" defaultValue="">
+        <select className="filter-select" value={projectId || ""} onChange={(e) => {
+          const next = e.target.value;
+          setSearchParams(next ? { projectId: next } : {});
+        }}>
           <option value="">All projects</option>
-          {project && <option value={project.id}>{project.title}</option>}
+          {facultyPostings.map((p) => (
+            <option key={p.id} value={p.id}>{p.title}</option>
+          ))}
         </select>
         <span className="sort-label">Sort: Most recent</span>
       </div>
 
-      {applicants.length === 0 ? (
-        <div className="applicants-empty">
-          No applicants for this project yet.
-        </div>
-      ) : (
+      {loading && <div className="applicants-empty">Loading...</div>}
+      {!loading && applicants.length === 0 && <div className="applicants-empty">No applicants for this project yet.</div>}
+      {!loading && applicants.length > 0 && (
         <div className="applications-table-wrapper">
           <table className="applications-table applicants-table">
             <thead>
@@ -154,43 +168,25 @@ function FacultyApplications() {
                       <span className="student-email">{app.email}</span>
                     </div>
                   </td>
-                  <td>
-                    <div className="position-cell">{app.position}</div>
-                  </td>
+                  <td><div className="position-cell">{app.position}</div></td>
                   <td>
                     <div className="skills-preview">
-                      {app.skills.slice(0, 2).map((s) => (
-                        <span key={s} className="skill-pill">
-                          {s}
-                        </span>
+                      {(Array.isArray(app.skills) ? app.skills : []).slice(0, 2).map((s) => (
+                        <span key={s} className="skill-pill">{s}</span>
                       ))}
-                      {app.skills.length > 2 && (
-                        <span className="skills-more">+{app.skills.length - 2}</span>
-                      )}
+                      {(Array.isArray(app.skills) ? app.skills : []).length > 2 && <span className="skills-more">+{(Array.isArray(app.skills) ? app.skills : []).length - 2}</span>}
                     </div>
-                    <button
-                      type="button"
-                      className="link-btn"
-                      onClick={() => setSkillsModal(app)}
-                    >
-                      View skills
-                    </button>
+                    <button type="button" className="link-btn" onClick={() => setSkillsModal(app)}>View skills</button>
                   </td>
                   <td>
-                    <span
-                      className={`app-status-badge ${STATUS_STYLES[app.status] || "status-review"}`}
-                    >
-                      {app.status}
-                    </span>
+                    <select value={app.status} className={`filter-select ${STATUS_STYLES[app.status] || "status-review"}`} onChange={(e) => handleStatusChange(app.applicationId, e.target.value)}>
+                      {STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}
+                    </select>
                   </td>
-                  <td>{app.assessment}</td>
-                  <td>{app.gpa}</td>
+                  <td>{app.assessment || "—"}</td>
+                  <td>{app.gpa ?? "—"}</td>
                   <td>{app.appliedDate}</td>
-                  <td>
-                    <button type="button" className="btn btn-outline btn-sm">
-                      View profile
-                    </button>
-                  </td>
+                  <td><button type="button" className="btn btn-outline btn-sm" onClick={() => setSkillsModal(app)}>View profile</button></td>
                 </tr>
               ))}
             </tbody>
@@ -199,34 +195,15 @@ function FacultyApplications() {
       )}
 
       {skillsModal && (
-        <div
-          className="skills-modal-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="skills-modal-title"
-          onClick={() => setSkillsModal(null)}
-        >
-          <div
-            className="skills-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 id="skills-modal-title" className="skills-modal-title">
-              {skillsModal.student}&apos;s skills
-            </h2>
+        <div className="skills-modal-overlay" aria-labelledby="skills-modal-title">
+          <section className="skills-modal">
+            <h2 id="skills-modal-title" className="skills-modal-title">{skillsModal.student}&apos;s skills</h2>
             <p className="skills-modal-meta">{skillsModal.position}</p>
             <ul className="skills-modal-list">
-              {skillsModal.skills.map((skill) => (
-                <li key={skill}>{skill}</li>
-              ))}
+              {(Array.isArray(skillsModal.skills) ? skillsModal.skills : []).map((skill) => (<li key={skill}>{skill}</li>))}
             </ul>
-            <button
-              type="button"
-              className="btn skills-modal-close"
-              onClick={() => setSkillsModal(null)}
-            >
-              Close
-            </button>
-          </div>
+            <button type="button" className="btn skills-modal-close" onClick={() => setSkillsModal(null)}>Close</button>
+          </section>
         </div>
       )}
     </div>
