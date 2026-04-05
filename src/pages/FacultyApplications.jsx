@@ -37,7 +37,6 @@ function FacultyApplications() {
         setFacultyPostings([]);
       }
     };
-
     fetchPostings();
   }, [userID]);
 
@@ -48,7 +47,6 @@ function FacultyApplications() {
         setLoading(false);
         return;
       }
-
       setLoading(true);
       try {
         const url = projectId
@@ -63,7 +61,6 @@ function FacultyApplications() {
         setLoading(false);
       }
     };
-
     fetchApplicants();
   }, [userID, projectId]);
 
@@ -86,11 +83,28 @@ function FacultyApplications() {
         setStatusMessage(data.error || "Could not update status.");
         return;
       }
-      setApplicants((prev) => prev.map((app) => (app.applicationId === applicationId ? { ...app, status: nextStatus } : app)));
+      setApplicants((prev) =>
+        prev.map((app) =>
+          app.applicationId === applicationId ? { ...app, status: nextStatus } : app
+        )
+      );
       setStatusMessage("Application status updated.");
     } catch {
       setStatusMessage("Could not update status.");
     }
+  };
+
+  const renderAssessment = (assessment) => {
+    if (!assessment) return "—";
+    const score = Number(assessment.score);
+    const { passed } = assessment;
+    return (
+      <span className={`assessment-score-badge ${
+        passed === true ? "pass" : passed === false ? "fail" : ""
+      }`}>
+        {score.toFixed(1)}%
+      </span>
+    );
   };
 
   const statusCounts = applicants.reduce((acc, a) => {
@@ -130,10 +144,14 @@ function FacultyApplications() {
       </div>
 
       <div className="faculty-app-toolbar">
-        <select className="filter-select" value={projectId || ""} onChange={(e) => {
-          const next = e.target.value;
-          setSearchParams(next ? { projectId: next } : {});
-        }}>
+        <select
+          className="filter-select"
+          value={projectId || ""}
+          onChange={(e) => {
+            const next = e.target.value;
+            setSearchParams(next ? { projectId: next } : {});
+          }}
+        >
           <option value="">All projects</option>
           {facultyPostings.map((p) => (
             <option key={p.id} value={p.id}>{p.title}</option>
@@ -143,7 +161,9 @@ function FacultyApplications() {
       </div>
 
       {loading && <div className="applicants-empty">Loading...</div>}
-      {!loading && applicants.length === 0 && <div className="applicants-empty">No applicants for this project yet.</div>}
+      {!loading && applicants.length === 0 && (
+        <div className="applicants-empty">No applicants for this project yet.</div>
+      )}
       {!loading && applicants.length > 0 && (
         <div className="applications-table-wrapper">
           <table className="applications-table applicants-table">
@@ -174,19 +194,39 @@ function FacultyApplications() {
                       {(Array.isArray(app.skills) ? app.skills : []).slice(0, 2).map((s) => (
                         <span key={s} className="skill-pill">{s}</span>
                       ))}
-                      {(Array.isArray(app.skills) ? app.skills : []).length > 2 && <span className="skills-more">+{(Array.isArray(app.skills) ? app.skills : []).length - 2}</span>}
+                      {(Array.isArray(app.skills) ? app.skills : []).length > 2 && (
+                        <span className="skills-more">
+                          +{(Array.isArray(app.skills) ? app.skills : []).length - 2}
+                        </span>
+                      )}
                     </div>
-                    <button type="button" className="link-btn" onClick={() => setSkillsModal(app)}>View skills</button>
+                    <button type="button" className="link-btn" onClick={() => setSkillsModal(app)}>
+                      View skills
+                    </button>
                   </td>
                   <td>
-                    <select value={app.status} className={`filter-select ${STATUS_STYLES[app.status] || "status-review"}`} onChange={(e) => handleStatusChange(app.applicationId, e.target.value)}>
-                      {STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}
+                    <select
+                      value={app.status}
+                      className={`filter-select ${STATUS_STYLES[app.status] || "status-review"}`}
+                      onChange={(e) => handleStatusChange(app.applicationId, e.target.value)}
+                    >
+                      {STATUS_OPTIONS.map((status) => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
                     </select>
                   </td>
-                  <td>{app.assessment || "—"}</td>
+                  <td>{renderAssessment(app.assessment)}</td>
                   <td>{app.gpa ?? "—"}</td>
                   <td>{app.appliedDate}</td>
-                  <td><button type="button" className="btn btn-outline btn-sm" onClick={() => setSkillsModal(app)}>View profile</button></td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={() => setSkillsModal(app)}
+                    >
+                      View profile
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -197,12 +237,18 @@ function FacultyApplications() {
       {skillsModal && (
         <div className="skills-modal-overlay" aria-labelledby="skills-modal-title">
           <section className="skills-modal">
-            <h2 id="skills-modal-title" className="skills-modal-title">{skillsModal.student}&apos;s skills</h2>
+            <h2 id="skills-modal-title" className="skills-modal-title">
+              {skillsModal.student}&apos;s skills
+            </h2>
             <p className="skills-modal-meta">{skillsModal.position}</p>
             <ul className="skills-modal-list">
-              {(Array.isArray(skillsModal.skills) ? skillsModal.skills : []).map((skill) => (<li key={skill}>{skill}</li>))}
+              {(Array.isArray(skillsModal.skills) ? skillsModal.skills : []).map((skill) => (
+                <li key={skill}>{skill}</li>
+              ))}
             </ul>
-            <button type="button" className="btn skills-modal-close" onClick={() => setSkillsModal(null)}>Close</button>
+            <button type="button" className="btn skills-modal-close" onClick={() => setSkillsModal(null)}>
+              Close
+            </button>
           </section>
         </div>
       )}

@@ -16,15 +16,13 @@ function formatDate(isoStr) {
 function MyApplications() {
   const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
+  const [assessmentStatus, setAssessmentStatus] = useState({});
   const [loading, setLoading] = useState(true);
   const userID = localStorage.getItem("userID");
 
   useEffect(() => {
     const fetchApplications = async () => {
-      if (!userID) {
-        setLoading(false);
-        return;
-      }
+      if (!userID) { setLoading(false); return; }
       try {
         const res = await fetch(`${API_BASE}/my-applications/?userID=${userID}`);
         const data = await res.json();
@@ -38,6 +36,28 @@ function MyApplications() {
     fetchApplications();
   }, [userID]);
 
+  useEffect(() => {
+    const checkAssessments = async () => {
+      if (!userID || applications.length === 0) return;
+      const results = {};
+      await Promise.all(
+        applications.map(async (app) => {
+          try {
+            const res = await fetch(
+              `${API_BASE}/assessment/attempt/?userID=${userID}&postingID=${app.projectId}`
+            );
+            const data = await res.json();
+            results[app.projectId] = data;
+          } catch {
+            results[app.projectId] = { hasAssessment: false };
+          }
+        })
+      );
+      setAssessmentStatus(results);
+    };
+    checkAssessments();
+  }, [applications, userID]);
+
   const total = applications.length;
   const underReview = applications.filter((app) => ["New", "Under Review", "Shortlisted"].includes(app.status)).length;
   const accepted = applications.filter((app) => app.status === "Accepted").length;
@@ -49,6 +69,30 @@ function MyApplications() {
     { label: "Accepted", value: String(accepted) },
     { label: "Action Needed", value: String(actionNeeded) },
   ];
+
+  const renderAssessmentCell = (app) => {
+    const status = assessmentStatus[app.projectId];
+    if (!status) return null;
+    if (!status.hasAssessment) return null;
+
+    if (status.attempt) {
+      const { score, passed } = status.attempt;
+      return (
+        <span className={`assessment-score-badge ${passed === true ? "pass" : passed === false ? "fail" : ""}`}>
+          Quiz: {parseFloat(score).toFixed(1)}%
+        </span>
+      );
+    }
+
+    return (
+      <button
+        className="btn btn-sm"
+        onClick={() => navigate(`/student/assessment/${app.projectId}`)}
+      >
+        Take quiz
+      </button>
+    );
+  };
 
   let bodyContent;
   if (loading) {
@@ -66,12 +110,20 @@ function MyApplications() {
             <div className="card-meta">{app.faculty} · {app.department}</div>
           </div>
           <div className="app-card-right">
-            <span className="status-badge review">{app.status === "New" ? "Submitted" : app.status || "Submitted"}</span>
+            <span className="status-badge review">
+              {app.status === "New" ? "Submitted" : app.status || "Submitted"}
+            </span>
+            {renderAssessmentCell(app)}
           </div>
         </div>
         <div className="app-card-footer">
           <span>Applied: {formatDate(app.submittedAt)}</span>
-          <button className="btn btn-outline" onClick={() => navigate(`/student/project/${app.projectId}`)}>View Detail</button>
+          <button
+            className="btn btn-outline"
+            onClick={() => navigate(`/student/project/${app.projectId}`)}
+          >
+            View Detail
+          </button>
         </div>
       </div>
     ));
