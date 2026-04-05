@@ -6,7 +6,11 @@ class Users(models.Model):
     fullName = models.CharField(max_length=255)
     email = models.EmailField(max_length=255, unique=True)
     password = models.CharField(max_length=255)
-    roleType = models.CharField(max_length=20)  # 'student' or 'faculty'
+    roleType = models.CharField(max_length=20, choices=[
+        ('student', 'Student'),
+        ('faculty', 'Faculty'),
+        ('admin', 'Admin')
+    ])
 
     class Meta:
         db_table = 'Users'
@@ -42,34 +46,6 @@ class Faculty(models.Model):
         db_table = 'Faculty'
 
 
-class ResearchPostings(models.Model):
-    postingID = models.AutoField(primary_key=True)
-    facultyID = models.ForeignKey(Faculty, on_delete=models.CASCADE, db_column='facultyID')
-    deptID = models.ForeignKey(Department, on_delete=models.RESTRICT, db_column='deptID')
-    title = models.CharField(max_length=255)
-    description = models.TextField()
-    prerequisites = models.TextField(null=True, blank=True)
-    requiredGPA = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
-    createdAt = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=50)
-    deadline = models.DateField()
-
-    class Meta:
-        db_table = 'ResearchPostings'
-
-
-class Applications(models.Model):
-    applicationID = models.AutoField(primary_key=True)
-    studentID = models.ForeignKey(Students, on_delete=models.CASCADE, db_column='studentID')
-    postingID = models.ForeignKey(ResearchPostings, on_delete=models.CASCADE, db_column='postingID')
-    submissionDate = models.DateField()
-    status = models.CharField(max_length=50)
-    prerequisitesVerified = models.BooleanField(default=False)
-
-    class Meta:
-        db_table = 'Applications'
-
-
 class Skills(models.Model):
     skillID = models.AutoField(primary_key=True)
     skillName = models.CharField(max_length=255, unique=True)
@@ -88,6 +64,23 @@ class StudentSkills(models.Model):
         unique_together = (('studentID', 'skillID'),)
 
 
+class ResearchPostings(models.Model):
+    postingID = models.AutoField(primary_key=True)
+    facultyID = models.ForeignKey(Faculty, on_delete=models.CASCADE, db_column='facultyID')
+    deptID = models.ForeignKey(Department, on_delete=models.RESTRICT, db_column='deptID')
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    prerequisites = models.TextField(null=True, blank=True)
+    requiredGPA = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
+    minAssessmentScore = models.IntegerField(null=True, blank=True)  # NEW
+    createdAt = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=50)
+    deadline = models.DateField()
+
+    class Meta:
+        db_table = 'ResearchPostings'
+
+
 class PostingSkills(models.Model):
     postingID = models.ForeignKey(ResearchPostings, on_delete=models.CASCADE, db_column='postingID')
     skillID = models.ForeignKey(Skills, on_delete=models.CASCADE, db_column='skillID')
@@ -96,6 +89,27 @@ class PostingSkills(models.Model):
         db_table = 'PostingSkills'
         unique_together = (('postingID', 'skillID'),)
 
+
+class Applications(models.Model):
+    applicationID = models.AutoField(primary_key=True)
+    studentID = models.ForeignKey(Students, on_delete=models.CASCADE, db_column='studentID')
+    postingID = models.ForeignKey(ResearchPostings, on_delete=models.CASCADE, db_column='postingID')
+    submissionDate = models.DateField()
+    status = models.CharField(max_length=50, choices=[
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+        ('under_review', 'Under Review')
+    ])
+    prerequisitesVerified = models.BooleanField(default=False)
+    email = models.EmailField(default="")
+    statementOfInterest = models.TextField(default="")
+
+    class Meta:
+        db_table = 'Applications'
+
+
+# ------------------ ASSESSMENTS ------------------
 
 class Assessments(models.Model):
     assessmentID = models.AutoField(primary_key=True)
@@ -110,21 +124,44 @@ class Questions(models.Model):
     questionID = models.AutoField(primary_key=True)
     assessmentID = models.ForeignKey(Assessments, on_delete=models.CASCADE, db_column='assessmentID')
     questionText = models.TextField()
-    questionType = models.CharField(max_length=50)
-    correctAnswer = models.TextField(null=True, blank=True)
+    questionType = models.CharField(max_length=50, choices=[
+        ('mcq', 'Multiple Choice'),
+        ('short', 'Short Answer')
+    ])
+    correctAnswer = models.TextField(null=True, blank=True)  # used for short answer
     points = models.IntegerField()
 
     class Meta:
         db_table = 'Questions'
 
 
+class Choices(models.Model):
+    choiceID = models.AutoField(primary_key=True)
+    questionID = models.ForeignKey(Questions, on_delete=models.CASCADE, db_column='questionID') 
+    choiceText = models.TextField()
+    isCorrect = models.BooleanField(default=False)
+    class Meta:
+        db_table = 'Choices'
+
+
 class AssessmentAttempts(models.Model):
     attemptID = models.AutoField(primary_key=True)
     studentID = models.ForeignKey(Students, on_delete=models.CASCADE, db_column='studentID')
     assessmentID = models.ForeignKey(Assessments, on_delete=models.CASCADE, db_column='assessmentID')
-    score = models.IntegerField()
+    score = models.DecimalField(max_digits=5, decimal_places=2)
     passed = models.BooleanField(null=True, blank=True)
     attemptDate = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'AssessmentAttempts'
+
+
+class StudentAnswers(models.Model):
+    answerID = models.AutoField(primary_key=True)
+    attemptID = models.ForeignKey(AssessmentAttempts, on_delete=models.CASCADE, db_column='attemptID')  
+    questionID = models.ForeignKey(Questions, on_delete=models.CASCADE, db_column='questionID')  
+    selectedChoice = models.ForeignKey(Choices, null=True, blank=True, on_delete=models.SET_NULL, db_column='selectedChoice')
+    textAnswer = models.TextField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'StudentAnswers'

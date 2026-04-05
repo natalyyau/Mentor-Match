@@ -17,6 +17,11 @@ from .models import (
     StudentSkills,
     Students,
     Users,
+    Assessments,
+    AssessmentAttempts,
+    Choices,
+    Questions,
+    StudentAnswers,
 )
 
 
@@ -478,6 +483,22 @@ def faculty_applications(request):
     for app in apps:
         student = app.studentID
         posting = app.postingID
+
+        # ── Assessment score ──
+        assessment_score = None
+        try:
+            assessment = Assessments.objects.get(postingID=posting)
+            attempt = AssessmentAttempts.objects.filter(
+                studentID=student, assessmentID=assessment
+            ).first()
+            if attempt:
+                assessment_score = {
+                    "score": float(attempt.score),
+                    "passed": attempt.passed,
+                }
+        except Assessments.DoesNotExist:
+            pass
+
         enriched.append({
             "id": app.applicationID,
             "applicationId": app.applicationID,
@@ -485,7 +506,7 @@ def faculty_applications(request):
             "email": student.userID.email,
             "position": posting.title,
             "skills": _student_skill_names(student),
-            "assessment": None,
+            "assessment": assessment_score,
             "gpa": float(student.gpa) if student.gpa is not None else None,
             "appliedDate": app.submissionDate.isoformat(),
             "status": app.status,
@@ -518,3 +539,302 @@ def update_application_status(request):
     application.status = status
     application.save(update_fields=["status"])
     return Response({"message": "Application status updated successfully", "applicationId": application.applicationID, "status": application.status})
+
+@api_view(["POST"])
+def create_assessment(request):
+    """
+    Faculty creates an assessment for a posting.
+    Called right after creating a posting.
+ 
+    Body: {
+        postingID, title,
+        questions: [
+            {
+                questionText, questionType ("mcq"|"short"), points,
+                correctAnswer,          # short answer only
+                choices: [              # mcq only
+                    { choiceText, isCorrect }
+                ]
+            }
+        ]
+    }
+    """
+    data = request.data or {}
+    user_id = data.get("userID")
+    posting_id = data.get("postingID")
+    title = _clean_text(data.get("title") or "Assessment")
+    questions_data = data.get("questions", [])
+ 
+    if not user_id or not posting_id:
+        return Response({"error": "userID and postingID are required"}, status=400)
+    if not questions_data:
+        return Response({"error": "At least one question is required"}, status=400)
+ 
+    faculty = _get_faculty_by_user_id(int(user_id))
+    if not faculty:
+        return Response({"error": "Faculty not found"}, status=400)
+ 
+    try:
+        posting = ResearchPostings.objects.get(postingID=int(posting_id), facultyID=faculty)
+    except ResearchPostings.DoesNotExist:
+        return Response({"error": "Posting not found"}, status=404)
+ 
+    # Delete existing assessment for this posting if re-creating
+    Assessments.objects.filter(postingID=posting).delete()
+ 
+    assessment = Assessments.objects.create(postingID=posting, title=title)
+ 
+    for q_data in questions_data:
+        q_text = _clean_text(q_data.get("questionText"))
+        q_type = _clean_text(q_data.get("questionType"))
+        points = int(q_data.get("points") or 1)
+ 
+        if not q_text or q_type not in ("mcq", "short"):
+            continue
+ 
+        question = Questions.objects.create(
+            assessmentID=assessment,
+            questionText=q_text,
+            questionType=q_type,
+            correctAnswer=_clean_text(q_data.get("correctAnswer")) or None,
+            points=points,
+        )
+ 
+        if q_type == "mcq":
+            for choice_data in q_data.get("choices", []):
+                choice_text = _clean_text(choice_data.get("choiceText"))
+                if choice_text:
+                    Choices.objects.create(
+                        questionID=question,
+                        choiceText=choice_text,
+                        isCorrect=bool(choice_data.get("isCorrect", False)),
+                    )
+ 
+    return Response({"message": "Assessment created", "assessmentID": assessment.assessmentID}, status=201)
+ 
+ 
+@api_view(["GET"])
+def get_assessment(request, posting_id: int):
+    """
+    Returns the assessment (with questions + choices) for a posting.
+    Used by students before taking it.
+    Does NOT include correct answers.
+    """
+    try:
+        assessment = Assessments.objects.get(postingID_id=posting_id)
+    except Assessments.DoesNotExist:
+        return Response({"assessment": None})
+ 
+    questions = []
+    for q in Questions.objects.filter(assessmentID=assessment).order_by("questionID"):
+        q_data = {
+            "questionID": q.questionID,
+            "questionText": q.questionText,
+            "questionType": q.questionType,
+            "points": q.points,
+            "choices": [],
+        }
+        if q.questionType == "mcq":
+            for c in Choices.objects.filter(questionID=q):
+                q_data["choices"].append({
+                    "choiceID": c.choiceID,
+                    "choiceText": c.choiceText,
+                })
+        questions.append(q_data)
+ 
+    return Response({
+        "assessment": {
+            "assessmentID": assessment.assessmentID,
+            "title": assessment.title,
+            "questions": questions,
+        }
+    })
+
+@api_view(["GET"])
+def get_assessment_faculty(request, posting_id: int):
+    """
+    Returns full assessment including correct answers — for faculty editing only.
+    """
+    user_id = request.query_params.get("userID")
+    if not user_id:
+        return Response({"error": "userID required"}, status=400)
+
+    faculty = _get_faculty_by_user_id(int(user_id))
+    if not faculty:
+        return Response({"error": "Faculty not found"}, status=403)
+
+    try:
+        assessment = Assessments.objects.get(postingID_id=posting_id)
+    except Assessments.DoesNotExist:
+        return Response({"assessment": None})
+
+    # Verify this faculty owns the posting
+    if assessment.postingID.facultyID != faculty:
+        return Response({"error": "Unauthorized"}, status=403)
+
+    questions = []
+    for q in Questions.objects.filter(assessmentID=assessment).order_by("questionID"):
+        q_data = {
+            "questionID": q.questionID,
+            "questionText": q.questionText,
+            "questionType": q.questionType,
+            "points": q.points,
+            "correctAnswer": q.correctAnswer or "",
+            "choices": [],
+        }
+        if q.questionType == "mcq":
+            for c in Choices.objects.filter(questionID=q):
+                q_data["choices"].append({
+                    "choiceID": c.choiceID,
+                    "choiceText": c.choiceText,
+                    "isCorrect": c.isCorrect,  # ← included for faculty
+                })
+        questions.append(q_data)
+
+    return Response({
+        "assessment": {
+            "assessmentID": assessment.assessmentID,
+            "title": assessment.title,
+            "questions": questions,
+        }
+    })
+ 
+ 
+@api_view(["POST"])
+def submit_assessment(request):
+    """
+    Student submits answers.
+ 
+    Body: {
+        userID, assessmentID,
+        answers: [
+            { questionID, selectedChoiceID }   # mcq
+            { questionID, textAnswer }          # short
+        ]
+    }
+    """
+    data = request.data or {}
+    user_id = data.get("userID")
+    assessment_id = data.get("assessmentID")
+    answers = data.get("answers", [])
+ 
+    if not user_id or not assessment_id:
+        return Response({"error": "userID and assessmentID are required"}, status=400)
+ 
+    student = _get_student_by_user_id(int(user_id))
+    if not student:
+        return Response({"error": "Student not found"}, status=400)
+ 
+    try:
+        assessment = Assessments.objects.get(assessmentID=int(assessment_id))
+    except Assessments.DoesNotExist:
+        return Response({"error": "Assessment not found"}, status=404)
+ 
+    # Prevent re-taking
+    if AssessmentAttempts.objects.filter(studentID=student, assessmentID=assessment).exists():
+        return Response({"error": "You have already completed this assessment"}, status=400)
+ 
+    # Grade
+    total_points = 0
+    earned_points = 0
+ 
+    attempt = AssessmentAttempts.objects.create(
+        studentID=student,
+        assessmentID=assessment,
+        score=0,
+        passed=None,
+    )
+ 
+    for ans in answers:
+        question_id = ans.get("questionID")
+        try:
+            question = Questions.objects.get(questionID=int(question_id), assessmentID=assessment)
+        except Questions.DoesNotExist:
+            continue
+ 
+        total_points += question.points
+        selected_choice = None
+        is_correct = False
+ 
+        if question.questionType == "mcq":
+            choice_id = ans.get("selectedChoiceID")
+            if choice_id:
+                try:
+                    selected_choice = Choices.objects.get(choiceID=int(choice_id), questionID=question)
+                    is_correct = selected_choice.isCorrect
+                except Choices.DoesNotExist:
+                    pass
+            StudentAnswers.objects.create(
+                attemptID=attempt,
+                questionID=question,
+                selectedChoice=selected_choice,
+            )
+        else:
+            # Short answer: store text, no auto-grade
+            text = _clean_text(ans.get("textAnswer"))
+            StudentAnswers.objects.create(
+                attemptID=attempt,
+                questionID=question,
+                textAnswer=text,
+            )
+            # Partial credit: simple case-insensitive match if correctAnswer set
+            if question.correctAnswer and text.lower() == question.correctAnswer.strip().lower():
+                is_correct = True
+ 
+        if is_correct:
+            earned_points += question.points
+ 
+    score = round((earned_points / total_points) * 100, 2) if total_points > 0 else 0
+ 
+    # Check against posting's minAssessmentScore
+    posting = assessment.postingID
+    passed = None
+    if posting.minAssessmentScore is not None:
+        passed = score >= posting.minAssessmentScore
+ 
+    attempt.score = score
+    attempt.passed = passed
+    attempt.save()
+ 
+    return Response({
+        "message": "Assessment submitted",
+        "score": score,
+        "passed": passed,
+        "earnedPoints": earned_points,
+        "totalPoints": total_points,
+    }, status=201)
+ 
+ 
+@api_view(["GET"])
+def get_attempt(request):
+    """
+    Check if a student already attempted an assessment for a posting.
+    GET /api/assessment/attempt/?userID=X&postingID=Y
+    """
+    user_id = request.query_params.get("userID")
+    posting_id = request.query_params.get("postingID")
+ 
+    if not user_id or not posting_id:
+        return Response({"attempt": None})
+ 
+    student = _get_student_by_user_id(int(user_id))
+    if not student:
+        return Response({"attempt": None})
+ 
+    try:
+        assessment = Assessments.objects.get(postingID_id=int(posting_id))
+    except Assessments.DoesNotExist:
+        return Response({"attempt": None, "hasAssessment": False})
+ 
+    attempt = AssessmentAttempts.objects.filter(studentID=student, assessmentID=assessment).first()
+    if not attempt:
+        return Response({"attempt": None, "hasAssessment": True, "assessmentID": assessment.assessmentID})
+ 
+    return Response({
+        "hasAssessment": True,
+        "attempt": {
+            "score": float(attempt.score),
+            "passed": attempt.passed,
+            "attemptDate": attempt.attemptDate.isoformat(),
+        }
+    })

@@ -1,0 +1,329 @@
+/* TakeAssessment.css */
+
+/* ── Quiz Builder (used in CreatePosting) ── */
+.quiz-builder {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.quiz-builder-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary, #1a2332);
+  margin: 0 0 0.25rem;
+}
+
+.quiz-question-card {
+  border: 1px solid #dce3ef;
+  border-radius: 10px;
+  padding: 1.25rem;
+  background: #f9fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.quiz-question-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.quiz-question-number {
+  font-weight: 700;
+  color: #4a6fa5;
+  font-size: 0.9rem;
+}
+
+.quiz-remove-btn {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.6rem;
+  color: #c0392b;
+  border-color: #c0392b;
+}
+
+.quiz-meta-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.quiz-meta-row .input-group {
+  flex: 1;
+}
+
+.quiz-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.quiz-choices label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #5a6b85;
+  margin-bottom: 0.25rem;
+}
+
+.quiz-choice-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quiz-choice-row input[type="radio"] {
+  accent-color: #4a6fa5;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.quiz-choice-input {
+  flex: 1;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #dce3ef;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.quiz-remove-choice {
+  background: none;
+  border: none;
+  color: #aab3c4;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+
+.quiz-remove-choice:hover { color: #c0392b; }
+
+.quiz-section {
+  margin-top: 0.5rem;
+  padding: 1.25rem;
+  background: #f4f7fc;
+  border-radius: 10px;
+  border: 1px solid #dce3ef;
+}
+
+.assessment-toggle-group {
+  margin-top: 0.5rem;
+}
+
+.assessment-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #1a2332;
+  cursor: pointer;
+}
+
+.assessment-toggle-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #4a6fa5;
+  flex-shrink: 0;
+}
+
+/* ── Take Assessment page ── */
+.take-assessment-page {
+  max-width: 760px;
+}
+
+.ta-header {
+  margin-bottom: 2rem;
+}
+
+.ta-progress-bar {
+  height: 6px;
+  background: #e2e8f2;
+  border-radius: 99px;
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+.ta-progress-fill {
+  height: 100%;
+  background: #4a6fa5;
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
+.ta-progress-label {
+  font-size: 0.8rem;
+  color: #8a99af;
+  margin-top: 0.4rem;
+}
+
+.ta-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.ta-question-card {
+  background: #fff;
+  border: 1.5px solid #dce3ef;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: border-color 0.2s;
+}
+
+.ta-question-card.answered {
+  border-color: #4a6fa5;
+}
+
+.ta-question-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.ta-q-number {
+  font-weight: 700;
+  color: #4a6fa5;
+  font-size: 0.85rem;
+  background: #eef2fa;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+}
+
+.ta-q-points {
+  font-size: 0.8rem;
+  color: #8a99af;
+}
+
+.ta-question-text {
+  font-size: 1rem;
+  color: #1a2332;
+  font-weight: 500;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+}
+
+.ta-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ta-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid #dce3ef;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-size: 0.95rem;
+  color: #2d3e55;
+}
+
+.ta-choice:hover { border-color: #4a6fa5; background: #f4f7fc; }
+
+.ta-choice.selected {
+  border-color: #4a6fa5;
+  background: #eef2fa;
+  font-weight: 500;
+}
+
+.ta-choice input[type="radio"] {
+  accent-color: #4a6fa5;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.ta-short-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1.5px solid #dce3ef;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  resize: vertical;
+  font-family: inherit;
+  color: #1a2332;
+  box-sizing: border-box;
+}
+
+.ta-short-input:focus {
+  outline: none;
+  border-color: #4a6fa5;
+}
+
+.ta-submit-row {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding-bottom: 3rem;
+}
+
+/* ── Result page ── */
+.ta-result-page {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 3rem;
+}
+
+.ta-result-card {
+  background: #fff;
+  border: 1px solid #dce3ef;
+  border-radius: 16px;
+  padding: 2.5rem 3rem;
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ta-result-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.ta-result-icon.pass   { background: #d4edda; color: #1a7a3c; }
+.ta-result-icon.fail   { background: #fde8e8; color: #c0392b; }
+.ta-result-icon.neutral { background: #eef2fa; color: #4a6fa5; }
+
+.ta-result-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1a2332;
+  margin: 0;
+}
+
+.ta-score-display { margin: 0.5rem 0; }
+
+.ta-score-number {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #4a6fa5;
+  line-height: 1;
+}
+
+.ta-result-msg {
+  font-size: 0.95rem;
+  color: #5a6b85;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.pass-msg { color: #1a7a3c; }
+.fail-msg { color: #c0392b; }
