@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Register.css";
+
+const API_BASE = "http://127.0.0.1:8000/api";
 
 function Register() {
   const navigate = useNavigate();
@@ -15,16 +17,63 @@ function Register() {
     major: "",
     year: "",
     gpa: "",
-    skills: "",
+    skills: [],
     department: "",
     position: "",
-    researchAreas: ""
+    researchAreas: "",
   });
 
+  const [availableSkills, setAvailableSkills] = useState([]);
+  const [customSkill, setCustomSkill] = useState("");
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    const loadSkills = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/skills/`);
+        const data = await response.json();
+        setAvailableSkills(Array.isArray(data.skills) ? data.skills : []);
+      } catch {
+        setAvailableSkills([]);
+      }
+    };
+    loadSkills();
+  }, []);
+
+  const sortedSkills = useMemo(
+    () => [...availableSkills].sort((a, b) => a.localeCompare(b)),
+    [availableSkills]
+  );
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const toggleSkill = (skill) => {
+    setFormData((prev) => ({
+      ...prev,
+      skills: prev.skills.includes(skill)
+        ? prev.skills.filter((item) => item !== skill)
+        : [...prev.skills, skill],
+    }));
+  };
+
+  const addCustomSkill = () => {
+    const skill = customSkill.trim();
+    if (!skill) return;
+
+    const normalized = skill
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(" ");
+
+    setAvailableSkills((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
+    setFormData((prev) => ({
+      ...prev,
+      skills: prev.skills.includes(normalized) ? prev.skills : [...prev.skills, normalized],
+    }));
+    setCustomSkill("");
   };
 
   const validate = () => {
@@ -44,6 +93,7 @@ function Register() {
       if (!formData.major) newErrors.major = "Major is required.";
       if (!formData.year) newErrors.year = "Year/Level is required.";
       if (!formData.gpa || isNaN(formData.gpa) || formData.gpa < 0 || formData.gpa > 4) newErrors.gpa = "GPA must be 0.0–4.0";
+      if (formData.skills.length === 0) newErrors.skills = "Select at least one skill.";
     }
 
     if (formData.role === "faculty") {
@@ -67,10 +117,10 @@ function Register() {
     setErrors({});
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/register/", {
+      const response = await fetch(`${API_BASE}/register/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
@@ -94,7 +144,6 @@ function Register() {
         <p className="register-subtitle">Research Collaboration Platform</p>
 
         <form onSubmit={handleSubmit} className="register-form">
-
           <div className="input-group">
             <label>Role</label>
             <select name="role" value={formData.role} onChange={handleChange}>
@@ -164,8 +213,36 @@ function Register() {
               </div>
 
               <div className="input-group">
-                <label>Skills</label>
-                <input type="text" name="skills" placeholder="e.g., Python, Data Analysis" value={formData.skills} onChange={handleChange} />
+                <label>Skill Pool</label>
+                <div className="skill-select-grid">
+                  {sortedSkills.map((skill) => (
+                    <button
+                      key={skill}
+                      type="button"
+                      className={`skill-chip ${formData.skills.includes(skill) ? "selected" : ""}`}
+                      onClick={() => toggleSkill(skill)}
+                    >
+                      {skill}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+                  <input
+                    type="text"
+                    placeholder="Add another skill"
+                    value={customSkill}
+                    onChange={(e) => setCustomSkill(e.target.value)}
+                  />
+                  <button type="button" className="register-button" onClick={addCustomSkill} style={{ width: "auto", padding: "10px 14px" }}>
+                    Add
+                  </button>
+                </div>
+                {formData.skills.length > 0 && (
+                  <p style={{ marginTop: "8px" }}>
+                    Selected: {formData.skills.join(", ")}
+                  </p>
+                )}
+                {errors.skills && <p className="error">{errors.skills}</p>}
               </div>
             </>
           )}

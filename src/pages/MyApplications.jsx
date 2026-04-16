@@ -1,54 +1,100 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
 import "./MyApplications.css";
 
 const API_BASE = "http://127.0.0.1:8000/api";
-
-const STAGES = ["Application Submitted", "Faculty Review", "Interview", "Final Decision"];
-
-function formatDate(isoStr) {
-  if (!isoStr) return "";
-  const d = new Date(isoStr);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
+const STAGES = ["Submitted", "Under Review", "Shortlisted", "Final Decision"];
 
 function MyApplications() {
   const navigate = useNavigate();
+  const userID = localStorage.getItem("userID");
+
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const userID = localStorage.getItem("userID");
 
   useEffect(() => {
     const fetchApplications = async () => {
       if (!userID) {
+        setApplications([]);
         setLoading(false);
         return;
       }
+
       try {
         const res = await fetch(`${API_BASE}/my-applications/?userID=${userID}`);
         const data = await res.json();
         setApplications(Array.isArray(data.applications) ? data.applications : []);
-      } catch {
+      } catch (error) {
+        console.error("Error loading applications:", error);
         setApplications([]);
       } finally {
         setLoading(false);
       }
     };
+
     fetchApplications();
   }, [userID]);
 
-  const total = applications.length;
-  const underReview = applications.filter((app) => ["New", "Under Review", "Shortlisted"].includes(app.status)).length;
-  const accepted = applications.filter((app) => app.status === "Accepted").length;
-  const actionNeeded = applications.filter((app) => app.status === "Rejected").length;
+  const stats = useMemo(() => {
+    const counts = {
+      total: applications.length,
+      submitted: 0,
+      underReview: 0,
+      shortlisted: 0,
+      accepted: 0,
+    };
 
-  const stats = [
-    { label: "Total Applications", value: String(total) },
-    { label: "Under Review", value: String(underReview) },
-    { label: "Accepted", value: String(accepted) },
-    { label: "Action Needed", value: String(actionNeeded) },
-  ];
+    applications.forEach((app) => {
+      const status = app.status || "";
+      if (status === "New") counts.submitted += 1;
+      if (status === "Under Review") counts.underReview += 1;
+      if (status === "Shortlisted") counts.shortlisted += 1;
+      if (status === "Accepted") counts.accepted += 1;
+    });
+
+    return [
+      { label: "Total Applications", value: String(counts.total) },
+      { label: "Submitted", value: String(counts.submitted) },
+      { label: "Under Review", value: String(counts.underReview) },
+      { label: "Shortlisted", value: String(counts.shortlisted) },
+      { label: "Accepted", value: String(counts.accepted) },
+    ];
+  }, [applications]);
+
+  const formatDate = (value) => {
+    if (!value) return "—";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return d.toLocaleDateString();
+  };
+
+  const renderAssessmentCell = (app) => {
+    const assessment = app.assessment;
+
+    if (!assessment) return null;
+
+    if (assessment.gradingStatus === "pending") {
+      return <span className="status-badge review">Pending Review</span>;
+    }
+
+    if (assessment.score === null || assessment.score === undefined) {
+      return <span className="status-badge review">Pending Review</span>;
+    }
+
+    const passed = assessment.passed === true;
+    const failed = assessment.passed === false;
+    const label = `${Number(assessment.score).toFixed(1)}%`;
+
+    return (
+      <button
+        className={`status-badge ${passed ? "accepted" : failed ? "review" : "review"}`}
+        type="button"
+      >
+        Quiz: {label}
+      </button>
+    );
+  };
 
   let bodyContent;
   if (loading) {
@@ -65,13 +111,23 @@ function MyApplications() {
             <div className="card-title">{app.title}</div>
             <div className="card-meta">{app.faculty} · {app.department}</div>
           </div>
+
           <div className="app-card-right">
-            <span className="status-badge review">{app.status === "New" ? "Submitted" : app.status || "Submitted"}</span>
+            <span className="status-badge review">
+              {app.status === "New" ? "Submitted" : app.status || "Submitted"}
+            </span>
+            {renderAssessmentCell(app)}
           </div>
         </div>
+
         <div className="app-card-footer">
           <span>Applied: {formatDate(app.submittedAt)}</span>
-          <button className="btn btn-outline" onClick={() => navigate(`/student/project/${app.projectId}`)}>View Detail</button>
+          <button
+            className="btn btn-outline"
+            onClick={() => navigate(`/student/project/${app.projectId}`)}
+          >
+            View Detail
+          </button>
         </div>
       </div>
     ));
