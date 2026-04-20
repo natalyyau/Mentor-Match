@@ -6,4 +6,5 @@ urlpatterns = [
 
     # API routes
     path('api/', include('users.urls')),
+    path("dashboard/", include("dashboard.urls")),
 ]

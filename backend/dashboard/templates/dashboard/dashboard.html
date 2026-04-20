@@ -1,0 +1,123 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+
+<h1 class="mb-4">Mentor Match Dashboard</h1>
+
+<div class="row">
+
+    <!-- KPI CARDS -->
+    <div class="col-md-3">
+        <div class="card p-3">
+            <h5>Users</h5>
+            <h2>{{ total_users }}</h2>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3">
+            <h5>Mentors</h5>
+            <h2>{{ total_mentors }}</h2>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3">
+            <h5>Mentees</h5>
+            <h2>{{ total_mentees }}</h2>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3">
+            <h5>Research Posts</h5>
+            <h2>{{ total_research_posts }}</h2>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3">
+            <h5>Departments</h5>
+            <h2>{{ total_departments }}</h2>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3">
+            <h5>Skills</h5>
+            <h2>{{ total_skills }}</h2>
+        </div>
+    </div>
+
+</div>
+
+<hr class="my-4">
+
+<!-- HIGH VALUE METRICS -->
+<div class="row">
+
+    <!-- TOP SKILLS CHART -->
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h5>Top Skills</h5>
+            <canvas id="skillsChart"></canvas>
+        </div>
+    </div>
+
+    <!-- POSTS BY DEPARTMENT -->
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h5>Posts by Department</h5>
+            <ul>
+                {% for dept in posts_by_department %}
+                    <li>{{ dept.dept_name }} ({{ dept.count }})</li>
+                {% empty %}
+                    <li>No data available</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+</div>
+
+<!-- DATA + SCRIPT MUST BE INSIDE BLOCK -->
+{{ popular_skills|json_script:"skills-data" }}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const data = JSON.parse(document.getElementById('skills-data').textContent);
+
+    const labels = data.map(item => item.skillName);
+    const values = data.map(item => item.num_users);
+
+    new Chart(document.getElementById('skillsChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Students per Skill',
+                data: values,
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+
+});
+</script>
+
+{% endblock %}
