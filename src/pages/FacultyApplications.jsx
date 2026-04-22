@@ -70,7 +70,6 @@ function FacultyApplications() {
 
   const handleStatusChange = async (applicationId, nextStatus) => {
     setStatusMessage("");
-
     try {
       const res = await fetch(`${API_BASE}/faculty-applications/status/`, {
         method: "POST",
@@ -83,7 +82,6 @@ function FacultyApplications() {
       });
 
       const data = await res.json();
-
       if (!res.ok) {
         setStatusMessage(data.error || "Could not update status.");
         return;
@@ -189,7 +187,7 @@ function FacultyApplications() {
         )
       );
 
-      setProfileModal((prev) => prev ? { ...prev, assessment: updatedAttempt } : prev);
+      setProfileModal((prev) => (prev ? { ...prev, assessment: updatedAttempt } : prev));
       setStatusMessage("Grades saved successfully.");
     } catch {
       setStatusMessage("Could not save grades.");
@@ -254,7 +252,6 @@ function FacultyApplications() {
             </option>
           ))}
         </select>
-
         <span className="sort-label">Sort: Most recent</span>
       </div>
 
@@ -275,8 +272,7 @@ function FacultyApplications() {
                 <th>Application Status</th>
                 <th>Assessment</th>
                 <th>GPA</th>
-                <th>Applied</th>
-                <th>Prereq Check</th>
+                <th>Applied Date</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -290,11 +286,9 @@ function FacultyApplications() {
                       <span className="student-email">{app.email}</span>
                     </div>
                   </td>
-
                   <td>
                     <div className="position-cell">{app.position}</div>
                   </td>
-
                   <td>
                     <div className="skills-preview">
                       {(Array.isArray(app.skills) ? app.skills : []).slice(0, 2).map((s) => (
@@ -309,7 +303,6 @@ function FacultyApplications() {
                       )}
                     </div>
                   </td>
-
                   <td>
                     <select
                       value={app.status}
@@ -324,12 +317,11 @@ function FacultyApplications() {
                     </select>
                   </td>
                   <td>{renderAssessment(app.assessment)}</td>
-
-                  <td>{renderAssessment(app.assessment)}</td>
-                  <td>{app.gpa ?? "—"}</td>
+                  <td>
+                    {/* GPA formatted to 1 decimal place */}
+                    {app.gpa !== null && !isNaN(app.gpa) ? Number(app.gpa).toFixed(1) : "—"}
+                  </td>
                   <td>{app.appliedDate}</td>
-                  <td>{app.prerequisitesVerified ? "Passed" : "Failed"}</td>
-
                   <td>
                     <button
                       type="button"
@@ -353,91 +345,90 @@ function FacultyApplications() {
               {profileModal.student}
             </h2>
 
-            <p className="skills-modal-meta">{profileModal.position}</p>
-            <p><strong>Email:</strong> {profileModal.email}</p>
-            <p><strong>Statement of interest:</strong> {profileModal.statementOfInterest || "—"}</p>
-            <p><strong>Prerequisites verified:</strong> {profileModal.prerequisitesVerified ? "Yes" : "No"}</p>
+            <div className="modal-body-content">
+              <p className="skills-modal-meta">{profileModal.position}</p>
+              <p><strong>Email:</strong> {profileModal.email}</p>
+              <p><strong>GPA:</strong> {profileModal.gpa !== null && !isNaN(profileModal.gpa) ? Number(profileModal.gpa).toFixed(1) : "—"}</p>
+              <p><strong>Statement of interest:</strong> {profileModal.statementOfInterest || "—"}</p>
 
-            <h3 className="modal-section-title">Skills</h3>
-            <ul className="skills-modal-list">
-              {(Array.isArray(skillsModal.skills) ? skillsModal.skills : []).map((skill) => (
-                <li key={skill}>{skill}</li>
-              ))}
-              {(Array.isArray(profileModal.skills) ? profileModal.skills : []).map((skill) => (
-                <li key={skill}>{skill}</li>
-              ))}
-            </ul>
+              <h3 className="modal-section-title">Skills</h3>
+              <ul className="skills-modal-list">
+                {(Array.isArray(profileModal.skills) ? profileModal.skills : []).map((skill) => (
+                  <li key={skill}>{skill}</li>
+                ))}
+              </ul>
 
-            {profileModal.assessment && (
-              <>
-                <h3 className="modal-section-title">Assessment</h3>
-                <p>
-                  <strong>Status:</strong>{" "}
-                  {profileModal.assessment.gradingStatus === "pending" ? "Pending review" : "Graded"}
-                </p>
-                <p>
-                  <strong>Score:</strong>{" "}
-                  {profileModal.assessment.score === null || profileModal.assessment.score === undefined
-                    ? "Pending"
-                    : `${Number(profileModal.assessment.score).toFixed(1)}%`}
-                </p>
+              {profileModal.assessment && (
+                <>
+                  <h3 className="modal-section-title">Assessment</h3>
+                  <p>
+                    <strong>Status:</strong>{" "}
+                    {profileModal.assessment.gradingStatus === "pending" ? "Pending review" : "Graded"}
+                  </p>
+                  <p>
+                    <strong>Score:</strong>{" "}
+                    {profileModal.assessment.score === null || profileModal.assessment.score === undefined
+                      ? "Pending"
+                      : `${Number(profileModal.assessment.score).toFixed(1)}%`}
+                  </p>
 
-                <div className="assessment-review-list">
-                  {(profileModal.assessment.answers || []).map((answer) => (
-                    <div key={answer.answerID} className="assessment-review-card">
-                      <p className="assessment-review-question">
-                        {answer.questionText}
-                      </p>
-
-                      {answer.questionType === "mcq" ? (
-                        <p>
-                          <strong>Selected answer:</strong> {answer.selectedChoiceText || "No response"}
+                  <div className="assessment-review-list">
+                    {(profileModal.assessment.answers || []).map((answer) => (
+                      <div key={answer.answerID} className="assessment-review-card">
+                        <p className="assessment-review-question">
+                          {answer.questionText}
                         </p>
-                      ) : (
-                        <>
+
+                        {answer.questionType === "mcq" ? (
                           <p>
-                            <strong>Student response:</strong> {answer.textAnswer || "No response"}
+                            <strong>Selected answer:</strong> {answer.selectedChoiceText || "No response"}
                           </p>
+                        ) : (
+                          <>
+                            <p>
+                              <strong>Student response:</strong> {answer.textAnswer || "No response"}
+                            </p>
 
-                          <div className="manual-grade-row">
-                            <div className="manual-grade-field">
-                              <label>Points (max {answer.maxPoints})</label>
-                              <input
-                                type="number"
-                                min="0"
-                                max={answer.maxPoints}
-                                step="0.5"
-                                value={gradingDraft[answer.answerID]?.awardedPoints ?? ""}
-                                onChange={(e) =>
-                                  updateGradeDraft(answer.answerID, "awardedPoints", e.target.value)
-                                }
-                              />
+                            <div className="manual-grade-row">
+                              <div className="manual-grade-field">
+                                <label>Points (max {answer.maxPoints})</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={answer.maxPoints}
+                                  step="0.5"
+                                  value={gradingDraft[answer.answerID]?.awardedPoints ?? ""}
+                                  onChange={(e) =>
+                                    updateGradeDraft(answer.answerID, "awardedPoints", e.target.value)
+                                  }
+                                />
+                              </div>
+
+                              <div className="manual-grade-field">
+                                <label>Feedback</label>
+                                <textarea
+                                  rows={2}
+                                  value={gradingDraft[answer.answerID]?.instructorFeedback ?? ""}
+                                  onChange={(e) =>
+                                    updateGradeDraft(answer.answerID, "instructorFeedback", e.target.value)
+                                  }
+                                />
+                              </div>
                             </div>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
 
-                            <div className="manual-grade-field">
-                              <label>Feedback</label>
-                              <textarea
-                                rows={2}
-                                value={gradingDraft[answer.answerID]?.instructorFeedback ?? ""}
-                                onChange={(e) =>
-                                  updateGradeDraft(answer.answerID, "instructorFeedback", e.target.value)
-                                }
-                              />
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {(profileModal.assessment.answers || []).some((a) => a.questionType === "short") && (
-                  <button type="button" className="btn" onClick={submitGrades}>
-                    Save grades
-                  </button>
-                )}
-              </>
-            )}
+                  {(profileModal.assessment.answers || []).some((a) => a.questionType === "short") && (
+                    <button type="button" className="btn" onClick={submitGrades}>
+                      Save grades
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
 
             <button
               type="button"

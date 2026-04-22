@@ -7,29 +7,33 @@ const API_BASE = "http://127.0.0.1:8000/api";
 
 const CATEGORIES = [
   "Physics", "Chemistry", "Biology", "Python", "Machine Learning",
-  "Statistics", "C++", "Computer Science", "8 Week", "12 Week",
+  "Statistics", "C++", "Computer Science",
 ];
 
 function BrowseOpportunities() {
   const navigate = useNavigate();
   const userID = localStorage.getItem("userID");
   const [opportunities, setOpportunities] = useState([]);
+  const [loading, setLoading] = useState(true); // New loading state
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
   const [skillFilter, setSkillFilter] = useState("");
-  const [durationFilter, setDurationFilter] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   useEffect(() => {
     const fetchOpportunities = async () => {
+      setLoading(true); // Start loading
       try {
         const params = new URLSearchParams();
         if (userID) params.set("userID", userID);
         const res = await fetch(`${API_BASE}/opportunities/?${params.toString()}`);
         const data = await res.json();
         setOpportunities(Array.isArray(data.opportunities) ? data.opportunities : []);
-      } catch {
+      } catch (error) {
+        console.error("Error fetching opportunities:", error);
         setOpportunities([]);
+      } finally {
+        setLoading(false); // Stop loading regardless of success/fail
       }
     };
 
@@ -39,17 +43,25 @@ function BrowseOpportunities() {
   const filteredProjects = useMemo(() => opportunities.filter((p) => {
     const title = String(p.title || "");
     const dept = String(p.department || "");
-    const duration = String(p.duration || "");
     const skills = Array.isArray(p.skills) ? p.skills : [];
 
     const matchSearch = !search || title.toLowerCase().includes(search.toLowerCase()) || dept.toLowerCase().includes(search.toLowerCase());
     const matchDept = !deptFilter || dept.toLowerCase().includes(deptFilter.toLowerCase());
     const matchSkill = !skillFilter || skills.some((s) => String(s).toLowerCase().includes(skillFilter.toLowerCase()));
-    const matchDuration = !durationFilter || duration.toLowerCase().includes(durationFilter.toLowerCase());
-    const matchCategory = !selectedCategory || skills.includes(selectedCategory) || dept.toLowerCase().includes(selectedCategory.toLowerCase()) || duration.toLowerCase().includes(String(selectedCategory).toLowerCase());
+    const matchCategory = !selectedCategory || skills.includes(selectedCategory) || dept.toLowerCase().includes(selectedCategory.toLowerCase());
 
-    return matchSearch && matchDept && matchSkill && matchDuration && matchCategory;
-  }), [opportunities, search, deptFilter, skillFilter, durationFilter, selectedCategory]);
+    return matchSearch && matchDept && matchSkill && matchCategory;
+  }), [opportunities, search, deptFilter, skillFilter, selectedCategory]);
+
+  // Loading Screen Render
+  if (loading) {
+    return (
+      <div className="dashboard-page browse-page loading-container">
+        <div className="loader"></div>
+        <p>Loading research opportunities...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-page browse-page browse-projects">
@@ -83,12 +95,6 @@ function BrowseOpportunities() {
               <option value="c++">C++</option>
               <option value="physics">Physics</option>
             </select>
-            <select value={durationFilter} onChange={(e) => setDurationFilter(e.target.value)} className="filter-select">
-              <option value="">Duration</option>
-              <option value="8 week">8 Week</option>
-              <option value="12 week">12 Week</option>
-              <option value="semester">Semester</option>
-            </select>
           </div>
         </div>
 
@@ -114,31 +120,33 @@ function BrowseOpportunities() {
       </div>
 
       <div className="projects-grid">
-        {filteredProjects.map((project, index) => (
-          <div key={project.id} className="project-card">
-            <div className="project-card-body">
-              <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "center" }}>
-                <h3 className="project-card-title">{project.title}</h3>
-                {userID && index < 3 && <span className="skill-tag">Top Match</span>}
+        {filteredProjects.length > 0 ? (
+          filteredProjects.map((project) => (
+            <div key={project.id} className="project-card">
+              <div className="project-card-body">
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "center" }}>
+                  <h3 className="project-card-title">{project.title}</h3>
+                </div>
+                <div className="project-card-meta">
+                  {project.faculty} · {project.department}
+                </div>
+                <div className="project-card-skills">
+                  {(Array.isArray(project.skills) ? project.skills : []).map((s) => (
+                    <span key={s} className="skill-tag">{s}</span>
+                  ))}
+                </div>
+                <p className="project-card-desc">{project.desc}</p>
               </div>
-              <div className="project-card-meta">
-                {project.faculty} · {project.department}
+              <div className="project-card-footer">
+                <button className="btn project-view-btn" onClick={() => navigate(`/student/project/${project.id}`)}>
+                  View Details
+                </button>
               </div>
-              <div className="project-card-skills">
-                {(Array.isArray(project.skills) ? project.skills : []).map((s) => (
-                  <span key={s} className="skill-tag">{s}</span>
-                ))}
-              </div>
-              <p className="project-card-desc">{project.desc}</p>
-              <div className="project-card-duration">{project.duration}</div>
             </div>
-            <div className="project-card-footer">
-              <button className="btn project-view-btn" onClick={() => navigate(`/student/project/${project.id}`)}>
-                View Details
-              </button>
-            </div>
-          </div>
-        ))}
+          ))
+        ) : (
+          <div className="no-results">No projects match your criteria.</div>
+        )}
       </div>
     </div>
   );

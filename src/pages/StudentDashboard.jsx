@@ -65,9 +65,9 @@ function StudentDashboard() {
         ))}
       </div>
 
-      <div className="dashboard-grid">
+      <div className="dashboard-grid single-col">
         <div className="dashboard-section">
-          <div className="dashboard-section-header">Recent Application</div>
+          <div className="dashboard-section-header">Recent Applications</div>
           <div className="dashboard-section-body">
             {recentApps.length === 0 && <p style={{ color: "#5a6b85", fontSize: "14px", margin: 0 }}>No recent applications.</p>}
             {recentApps.map((app, i) => (
@@ -80,13 +80,6 @@ function StudentDashboard() {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-
-        <div className="dashboard-section">
-          <div className="dashboard-section-header">Notification</div>
-          <div className="dashboard-section-body">
-            <p style={{ color: "#5a6b85", fontSize: "14px", margin: 0 }}>No new notifications.</p>
           </div>
         </div>
       </div>

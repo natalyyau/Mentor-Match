@@ -10,6 +10,10 @@
   align-items: center;
 }
 
+.dashboard-grid.single-col {
+  grid-template-columns: 1fr;
+}
+
 .faculty-posting-card .posting-header {
   display: flex;
   justify-content: space-between;

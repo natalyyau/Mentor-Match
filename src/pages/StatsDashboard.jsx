@@ -1,91 +1,83 @@
 import React, { useEffect, useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  PieChart, Pie, Cell, Legend 
+} from "recharts";
 import "./StatsDashboard.css";
 
-const COLORS = ["#82ca9d", "#8884d8", "#ffc658", "#ff8042", "#0088FE"];
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#ff7300"];
 
 function StatsDashboard() {
   const [data, setData] = useState(null);
 
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/dashboard/stats/")
-      .then((res) => res.json())
+      .then(res => res.json())
       .then(setData)
-      .catch((err) => console.error(err));
+      .catch(err => console.error(err));
   }, []);
 
   if (!data) return <div className="loading">Loading...</div>;
 
-  // Helper to truncate long skill names so they don't break the layout
-  const formatLabel = (value) => (value.length > 12 ? `${value.substring(0, 10)}...` : value);
+  // Define the cards in an array to keep the JSX clean
+  const statCards = [
+    { label: "Users", value: data.total_users },
+    { label: "Mentors", value: data.total_mentors },
+    { label: "Mentees", value: data.total_mentees },
+    { label: "Research Posts", value: data.total_research_posts },
+    { label: "Departments", value: data.total_departments },
+    { label: "Skills", value: data.total_skills },
+  ];
 
   return (
     <div className="dashboard-container">
-      {/* Top Cards Row */}
-      <div className="stats-grid">
-        <div className="stat-box"><h3>Users</h3><div className="stat-number">{data.total_users}</div></div>
-        <div className="stat-box"><h3>Mentors</h3><div className="stat-number">{data.total_mentors}</div></div>
-        <div className="stat-box"><h3>Mentees</h3><div className="stat-number">{data.total_mentees}</div></div>
-        <div className="stat-box"><h3>Research Posts</h3><div className="stat-number">{data.total_research_posts}</div></div>
-        <div className="stat-box"><h3>Departments</h3><div className="stat-number">{data.total_departments}</div></div>
-        <div className="stat-box"><h3>Skills</h3><div className="stat-number">{data.total_skills}</div></div>
+      {/* Top Cards Row - Now wrapped in a specific class for 6 columns */}
+      <div className="stats-row">
+        {statCards.map((card, index) => (
+          <div key={index} className="stat-box">
+            <h3>{card.label}</h3>
+            <div className="stat-number">{card.value}</div>
+          </div>
+        ))}
       </div>
 
       {/* Charts Row */}
       <div className="charts-grid">
-        {/* Top Skills Chart */}
         <div className="chart-card">
           <h2>Top Skills</h2>
           <ResponsiveContainer width="100%" height={350}>
-            <BarChart 
-              data={data.popular_skills} 
-              margin={{ top: 10, right: 10, left: 0, bottom: 70 }} // Added bottom margin for rotated labels
-            >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis 
-                dataKey="skillName" 
-                axisLine={false} 
-                tickLine={false} 
-                interval={0}           // Ensures all labels show
-                angle={-45}            // Rotates labels
-                textAnchor="end"       // Aligns rotated text correctly
-                tickFormatter={formatLabel} // Optional: truncates very long names
-                height={80}            // Gives the axis area more height
-              />
-              <YAxis axisLine={false} tickLine={false} />
-              <Tooltip cursor={{ fill: "transparent" }} />
-              <Legend verticalAlign="top" align="right" iconType="rect" wrapperStyle={{ paddingBottom: "20px" }} />
-              <Bar name="Students per Skill" dataKey="num_users" fill="#81c7f5" barSize={60} radius={[4, 4, 0, 0]} />
+            <BarChart data={data.popular_skills} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#eee" />
+              <XAxis type="number" hide /> 
+              <YAxis dataKey="skillName" type="category" width={110} axisLine={false} tickLine={false} style={{ fontSize: '12px', fontWeight: '500' }} />
+              <Tooltip cursor={{fill: '#f5f5f5'}} />
+              <Bar name="Students" dataKey="num_users" fill="#81c7f5" barSize={20} radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Posts by Department Chart */}
         <div className="chart-card">
           <h2>Posts by Department</h2>
-          {data.posts_by_department.length > 0 ? (
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart
+          <ResponsiveContainer width="100%" height={350}>
+            <PieChart>
+              <Pie
                 data={data.posts_by_department}
-                layout="vertical"
-                margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+                dataKey="count"
+                nameKey="dept_name"
+                cx="50%"
+                cy="50%"
+                outerRadius={110}
+                labelLine={true}
+                label={({ dept_name, percent }) => `${dept_name} (${(percent * 100).toFixed(0)}%)`}
               >
-                <XAxis type="number" hide />
-                <YAxis
-                  dataKey="dept_name"
-                  type="category"
-                  width={100}
-                  axisLine={false}
-                  tickLine={false}
-                  style={{ fontSize: '0.85rem' }}
-                />
-                <Tooltip cursor={{ fill: "transparent" }} />
-                <Bar dataKey="count" fill="#8884d8" barSize={25} radius={[0, 5, 5, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="no-data">• No data available</div>
-          )}
+                {data.posts_by_department.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend verticalAlign="bottom" align="center" />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>

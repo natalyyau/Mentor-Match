@@ -4,7 +4,7 @@ import "./Layout.css";
 const STUDENT_NAV = [
   { path: "/student/dashboard", label: "Dashboard" },
   { path: "/student/browse", label: "Browse Opportunities" },
-  { path: "/student/applications", label: "My Application" },
+  { path: "/student/applications", label: "My Applications" },
 ];
 
 const FACULTY_NAV = [

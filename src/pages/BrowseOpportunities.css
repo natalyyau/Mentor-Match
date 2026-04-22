@@ -173,3 +173,52 @@
   color: #5a6b85;
   margin-left: 4px;
 }
+
+/* Loading Screen Styles */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px; /* Adjust based on your layout */
+  background: white;
+  border: 1px solid #dcdfe4;
+  margin-top: 20px;
+}
+
+.loader {
+  width: 48px;
+  height: 48px;
+  border: 3px solid #e8ecf2;
+  border-bottom-color: #1a2b4c; /* Matches your active category/button color */
+  border-radius: 50%;
+  display: inline-block;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+.loading-container p {
+  color: #5a6b85;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+@keyframes rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px;
+  background: white;
+  border: 1px solid #dcdfe4;
+  color: #5a6b85;
+}

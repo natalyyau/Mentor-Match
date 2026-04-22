@@ -1,89 +1,104 @@
-.postings-toolbar {
+.my-projects-list {
   display: flex;
-  gap: 20px;
-  align-items: center;
-  margin-bottom: 24px;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 30px;
 }
 
-.postings-toolbar .filter-select {
-  padding: 10px 14px;
-  border: 1px solid #dcdfe4;
-  font-size: 14px;
-  background: white;
-  min-width: 160px;
+/* The Main Card */
+.my-project-card {
+  background-color: #ffffff; /* White background */
+  border: 1px solid #dcdfe4; /* Border matching your stats cards */
+  border-radius: 8px;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centering children horizontally */
+  text-align: center; /* Centering text specifically */
+  transition: transform 0.2s ease;
 }
 
-.sort-label {
-  font-size: 13px;
-  color: #5a6b85;
+.my-project-card:hover {
+  transform: translateY(-2px);
 }
 
-.my-posting-card {
+/* Header centering */
+.my-project-header {
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.my-posting-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 12px;
+.card-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a2b4c;
+  margin: 0 0 8px 0;
 }
 
 .posting-dates {
-  font-size: 13px;
-  color: #5a6b85;
-  margin-top: 4px;
-}
-
-.my-posting-stats {
-  display: flex;
-  gap: 20px;
-  font-size: 13px;
-  color: #5a6b85;
-  margin-bottom: 16px;
-}
-
-.posting-actions-row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.my-projects-empty {
-  background: white;
-  border: 1px solid #dcdfe4;
-  padding: 40px;
-  text-align: center;
-  color: #5a6b85;
-}
-
-.my-projects-empty p {
-  margin: 0 0 20px 0;
-}
-
-.my-project-card .my-project-desc {
   font-size: 14px;
-  color: #4a5a75;
-  line-height: 1.5;
-  margin: 0 0 12px 0;
+  color: #5a6b85;
+  margin-bottom: 12px;
 }
 
+/* Status Badge centering */
+.status-badge.accepted {
+  background-color: #e7f7ef;
+  color: #0d8a4e;
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Description text centering */
+.my-project-desc {
+  font-size: 15px;
+  color: #4a5a75;
+  line-height: 1.6;
+  max-width: 700px;
+  margin: 0 auto 24px auto;
+}
+
+/* Skills tags centered */
 .my-project-skills {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 30px;
 }
 
-.my-project-skills .skill-tag {
-  padding: 4px 10px;
-  font-size: 12px;
-  background: #1a2b4c;
-  color: white;
+.skill-tag {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  background-color: #1a2b4c;
+  color: #ffffff;
+  border-radius: 50px;
 }
 
-.my-project-actions {
-  padding-top: 4px;
+/* Action buttons centered */
+.posting-actions-row {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  width: 100%;
+}
+
+.btn-primary {
+  background-color: #1a2b4c !important;
+  color: white !important;
+}
+
+/* Empty state */
+.my-projects-empty {
+  background: white;
+  border: 1px solid #dcdfe4;
+  padding: 60px;
+  text-align: center;
+  border-radius: 8px;
 }

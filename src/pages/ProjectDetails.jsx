@@ -8,8 +8,8 @@ const API_BASE = "http://127.0.0.1:8000/api";
 function ProjectDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  
   const [project, setProject] = useState(null);
-
   const [applied, setApplied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -19,21 +19,29 @@ function ProjectDetails() {
 
   const userID = localStorage.getItem("userID");
 
+  // Debugging: Log the project data to check for mismatch between backend and frontend
+  console.log("Current Project State:", project);
+
   useEffect(() => {
     const fetchProject = async () => {
       try {
         const suffix = userID ? `?userID=${userID}` : "";
         const res = await fetch(`${API_BASE}/opportunities/${id}/${suffix}`);
         const data = await res.json();
+        
         if (res.ok) {
           setProject(data.opportunity || null);
+          // If the backend says you're ineligible, set the error message immediately
           if (data.opportunity?.eligibility?.reasons?.length) {
             setError(data.opportunity.eligibility.reasons.join(" "));
           } else {
             setError("");
           }
-        } else setProject(null);
-      } catch {
+        } else {
+          setProject(null);
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
         setProject(null);
       }
     };
@@ -43,20 +51,21 @@ function ProjectDetails() {
 
   useEffect(() => {
     const checkApplied = async () => {
-      if (!userID || !project) return;
+      if (!userID || !project?.id) return;
       try {
         const res = await fetch(
           `${API_BASE}/check-applied/?userID=${userID}&projectId=${project.id}`
         );
         const data = await res.json();
         if (data.applied) setApplied(true);
-      } catch {
-        // no-op
+      } catch (err) {
+        console.error("Check applied error:", err);
       }
     };
     checkApplied();
   }, [userID, project]);
 
+  // Eligibility Logic
   const canApply = Boolean(project?.eligibility?.eligible ?? true);
   const assessmentRequired = Boolean(project?.eligibility?.assessment?.required);
   const shouldShowAssessmentButton = assessmentRequired && !project?.eligibility?.assessment?.attempted;
@@ -67,6 +76,7 @@ function ProjectDetails() {
       navigate("/login");
       return;
     }
+    
     if (applied || !canApply) return;
 
     if (!appEmail.trim()) {
@@ -102,7 +112,6 @@ function ProjectDetails() {
       } else {
         if (data.error?.includes("already applied")) {
           setApplied(true);
-          setError("");
           setConfirmMessage("You have already applied to this opportunity.");
           return;
         }
@@ -112,7 +121,7 @@ function ProjectDetails() {
             : data.error || "Failed to submit application."
         );
       }
-    } catch {
+    } catch (err) {
       setError("Unable to connect. Please try again later.");
     } finally {
       setLoading(false);
@@ -161,16 +170,22 @@ function ProjectDetails() {
         <section className="project-details-section">
           <h2 className="section-heading">Prerequisites</h2>
           <ul>
+            {/* Logic: Only show the GPA requirement if it exists in the data */}
             {project.requiredGPA !== null && project.requiredGPA !== undefined && (
               <li>Minimum GPA: {project.requiredGPA}</li>
             )}
+            {/* Logic: Only show assessment requirement if it's flagged as required */}
             {assessmentRequired && (
               <li>Minimum assessment score: {project.minAssessmentScore}%</li>
             )}
+            {/* Logic: Show general prerequisites if provided as a string */}
             {project.prerequisites && <li>{project.prerequisites}</li>}
           </ul>
+          
           {project.eligibility?.missingSkills?.length > 0 && (
-            <p className="apply-error">Missing skills: {project.eligibility.missingSkills.join(", ")}</p>
+            <p className="apply-error">
+              Missing skills: {project.eligibility.missingSkills.join(", ")}
+            </p>
           )}
         </section>
 
@@ -202,12 +217,17 @@ function ProjectDetails() {
 
         <div className="project-details-footer">
           {shouldShowAssessmentButton && (
-            <button className="btn btn-outline" onClick={() => navigate(`/student/assessment/${project.id}`)}>
+            <button 
+              className="btn btn-outline" 
+              onClick={() => navigate(`/student/assessment/${project.id}`)}
+            >
               Take Assessment First
             </button>
           )}
+          
           {confirmMessage && <p className="apply-confirmation">{confirmMessage}</p>}
           {error && <p className="apply-error">{error}</p>}
+          
           <button
             className={`btn apply-btn ${applied ? "applied" : ""}`}
             onClick={handleApply}

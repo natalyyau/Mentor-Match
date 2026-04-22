@@ -52,7 +52,7 @@ function FacultyDashboard() {
         setActivePostings(postings.slice(0, 3));
 
         setRecentApplications(
-          applications.slice(0, 3).map((app) => ({
+          applications.slice(0, 5).map((app) => ({
             name: app.student,
             date: app.appliedDate,
             status: app.status,
@@ -83,90 +83,70 @@ function FacultyDashboard() {
         ))}
       </div>
 
-      <div className="dashboard-grid">
-        <div>
-          <div className="dashboard-section">
-            <div className="dashboard-section-header">
-              Active Postings
-              <Link to="/faculty/my-postings" className="view-all-link">View all</Link>
-            </div>
-            <div className="dashboard-section-body">
-              {activePostings.length === 0 && (
-                <p style={{ color: "#5a6b85", fontSize: "14px", margin: 0 }}>
-                  No active postings.
-                </p>
-              )}
-              {activePostings.map((post) => (
-                <div key={post.id} className="posting-card faculty-posting-card">
-                  <div className="posting-header">
-                    <div>
-                      <div className="card-title">{post.title}</div>
-                      <div className="posting-stats">{post.department}</div>
-                    </div>
-                    <span className="status-badge accepted">Active</span>
-                  </div>
-                  <div className="posting-meta">Deadline: {post.deadline}</div>
-                  <div className="card-footer posting-actions">
-                    <div>
-                      <Link to="/faculty/applications">
-                        <button className="btn">Review Applications</button>
-                      </Link>
-                      <Link to={`/faculty/my-postings`}>
-                        <button className="btn btn-outline">View</button>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+      <div className="dashboard-grid single-col">
 
-          <div className="dashboard-section">
-            <div className="dashboard-section-header">Recent Applications</div>
-            <div className="dashboard-section-body">
-              {recentApplications.length === 0 && (
-                <p style={{ color: "#5a6b85", fontSize: "14px", margin: 0 }}>
-                  No recent applications.
-                </p>
-              )}
-              {recentApplications.map((app) => (
-                <div key={app.applicationId} className="recent-app-row">
+        <div className="dashboard-section">
+          <div className="dashboard-section-header">
+            Active Postings
+            <Link to="/faculty/my-postings" className="view-all-link">View all</Link>
+          </div>
+          <div className="dashboard-section-body">
+            {activePostings.length === 0 && (
+              <p style={{ color: "#5a6b85", fontSize: "14px", margin: 0 }}>
+                No active postings.
+              </p>
+            )}
+            {activePostings.map((post) => (
+              <div key={post.id} className="posting-card faculty-posting-card">
+                <div className="posting-header">
                   <div>
-                    <div className="recent-app-name">{app.name}</div>
-                    <div className="recent-app-date">{app.date}</div>
+                    <div className="card-title">{post.title}</div>
+                    <div className="posting-stats">{post.department}</div>
                   </div>
-                  <div className="recent-app-right">
-                    <span className={`status-badge ${app.status === "Accepted" ? "accepted" : "pending"}`}>
-                      {app.status}
-                    </span>
+                  <span className="status-badge accepted">Active</span>
+                </div>
+                <div className="card-footer posting-actions">
+                  <div>
                     <Link to="/faculty/applications">
-                      <button className="btn btn-outline btn-sm">Review</button>
+                      <button className="btn">Review Applications</button>
+                    </Link>
+                    <Link to="/faculty/my-postings">
+                      <button className="btn btn-outline">View</button>
                     </Link>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div>
-          <div className="dashboard-section">
-            <div className="dashboard-section-header">Notification</div>
-            <div className="dashboard-section-body">
+        <div className="dashboard-section">
+          <div className="dashboard-section-header">Recent Applications</div>
+          <div className="dashboard-section-body">
+            {recentApplications.length === 0 && (
               <p style={{ color: "#5a6b85", fontSize: "14px", margin: 0 }}>
-                No new notifications.
+                No recent applications.
               </p>
-            </div>
-          </div>
-          <div className="dashboard-section">
-            <div className="dashboard-section-header">Application Trend</div>
-            <div className="dashboard-section-body">
-              <p style={{ color: "#5a6b85", fontSize: "14px", margin: 0 }}>
-                Chart placeholder — connect to analytics when ready.
-              </p>
-            </div>
+            )}
+            {recentApplications.map((app) => (
+              <div key={app.applicationId} className="recent-app-row">
+                <div>
+                  <div className="recent-app-name">{app.name}</div>
+                  <div className="recent-app-date">{app.date}</div>
+                </div>
+                <div className="recent-app-right">
+                  <span className={`status-badge ${app.status === "Accepted" ? "accepted" : "pending"}`}>
+                    {app.status}
+                  </span>
+                  <Link to="/faculty/applications">
+                    <button className="btn btn-outline btn-sm">Review</button>
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
+
       </div>
     </div>
   );

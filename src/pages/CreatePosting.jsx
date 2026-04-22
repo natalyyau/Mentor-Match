@@ -40,6 +40,7 @@ export default function CreatePosting() {
   const [requireAssessment, setRequireAssessment] = useState(false);
   const [quizTitle, setQuizTitle] = useState("Qualification Quiz");
   const [questions, setQuestions] = useState([]);
+
   const displayedSkills =
     availableSkills.length > 0 ? availableSkills : DEFAULT_AVAILABLE_SKILLS;
 
@@ -68,12 +69,16 @@ export default function CreatePosting() {
         if (res.ok && data.opportunity) {
           setTitle(data.opportunity.title || "");
           setDescription(data.opportunity.description || "");
-          setSelectedSkills(Array.isArray(data.opportunity.skills) ? data.opportunity.skills : []);
+          setSelectedSkills(
+            Array.isArray(data.opportunity.skills) ? data.opportunity.skills : []
+          );
           setRequiredGPA(data.opportunity.requiredGPA ?? "");
           setMinScore(data.opportunity.minAssessmentScore ?? "");
         }
 
-        const aRes = await fetch(`${API_BASE}/assessment/${editId}/faculty/?userID=${userID}`);
+        const aRes = await fetch(
+          `${API_BASE}/assessment/${editId}/faculty/?userID=${userID}`
+        );
         const aData = await aRes.json();
 
         if (aData.assessment) {
@@ -85,6 +90,7 @@ export default function CreatePosting() {
         // keep empty
       }
     };
+
     fetchExisting();
   }, [editId, userID]);
 
@@ -153,9 +159,11 @@ export default function CreatePosting() {
       title: title.trim(),
       description: description.trim(),
       skills: selectedSkills,
-      ...(requiredGPA !== "" ? { requiredGPA: Number.parseFloat(requiredGPA) } : {}),
-      ...(requireAssessment && minScore !== "" ? { minAssessmentScore: Number.parseInt(minScore, 10) } : {}),
-      ...(editId ? { postingID: Number.parseInt(editId, 10) } : {}),
+      ...(requiredGPA !== "" ? { requiredGPA: parseFloat(requiredGPA) } : {}),
+      ...(requireAssessment && minScore !== ""
+        ? { minAssessmentScore: parseInt(minScore, 10) }
+        : {}),
+      ...(editId ? { postingID: parseInt(editId, 10) } : {}),
     };
 
     try {
@@ -178,7 +186,7 @@ export default function CreatePosting() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            userID: Number.parseInt(userID, 10),
+            userID: parseInt(userID, 10),
             postingID,
             title: quizTitle.trim() || "Qualification Quiz",
             questions,
@@ -192,7 +200,9 @@ export default function CreatePosting() {
         }
       }
 
-      setSuccess(editId ? "Project updated successfully." : "Project created successfully.");
+      setSuccess(
+        editId ? "Project updated successfully." : "Project created successfully."
+      );
       navigate("/faculty/my-postings");
     } catch {
       setError("Unable to connect. Please try again later.");
@@ -201,9 +211,13 @@ export default function CreatePosting() {
 
   return (
     <div className="dashboard-page create-posting-page create-project-page">
-      <h1 className="dashboard-title">{editId ? "Edit Project" : "Create Project"}</h1>
+      <h1 className="dashboard-title">
+        {editId ? "Edit Project" : "Create Project"}
+      </h1>
       <p className="dashboard-subtitle">
-        {editId ? "Update your research opportunity" : "Add a new research opportunity for students"}
+        {editId
+          ? "Update your research opportunity"
+          : "Add a new research opportunity for students"}
       </p>
 
       <form className="create-project-form" onSubmit={handleSubmit}>
@@ -215,7 +229,10 @@ export default function CreatePosting() {
               id="project-title"
               type="text"
               value={title}
-              onChange={(e) => { setTitle(e.target.value); setError(""); }}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setError("");
+              }}
               placeholder="e.g. Machine Learning Research Assistant"
               maxLength={200}
             />
@@ -243,7 +260,9 @@ export default function CreatePosting() {
                 <button
                   key={skill}
                   type="button"
-                  className={`skill-chip ${selectedSkills.includes(skill) ? "selected" : ""}`}
+                  className={`skill-chip ${
+                    selectedSkills.includes(skill) ? "selected" : ""
+                  }`}
                   onClick={() => toggleSkill(skill)}
                   aria-pressed={selectedSkills.includes(skill)}
                 >
@@ -311,7 +330,9 @@ export default function CreatePosting() {
               </div>
 
               <div className="input-group">
-                <label htmlFor="min-assessment-score">Minimum assessment score (%)</label>
+                <label htmlFor="min-assessment-score">
+                  Minimum assessment score (%)
+                </label>
                 <input
                   id="min-assessment-score"
                   type="number"

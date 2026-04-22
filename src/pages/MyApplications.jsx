@@ -63,11 +63,17 @@ function MyApplications() {
   }, [applications]);
 
   const formatDate = (value) => {
-    if (!value) return "—";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return value;
-    return d.toLocaleDateString();
-  };
+  if (!value) return "—";
+  
+  const parts = value.split('-'); 
+  if (parts.length < 3) return value;
+
+  const year = parts[0];
+  const month = parts[1];
+  const day = parts[2];
+
+  return `${month}/${day}/${year}`;
+};
 
   const renderAssessmentCell = (app) => {
     const assessment = app.assessment;
