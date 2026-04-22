@@ -38,7 +38,6 @@ function FacultyApplications() {
         setFacultyPostings([]);
       }
     };
-
     fetchPostings();
   }, [userID]);
 
@@ -49,7 +48,6 @@ function FacultyApplications() {
         setLoading(false);
         return;
       }
-
       setLoading(true);
       try {
         const url = projectId
@@ -65,7 +63,6 @@ function FacultyApplications() {
         setLoading(false);
       }
     };
-
     fetchApplicants();
   }, [userID, projectId]);
 
@@ -242,10 +239,14 @@ function FacultyApplications() {
       </div>
 
       <div className="faculty-app-toolbar">
-        <select className="filter-select" value={projectId || ""} onChange={(e) => {
-          const next = e.target.value;
-          setSearchParams(next ? { projectId: next } : {});
-        }}>
+        <select
+          className="filter-select"
+          value={projectId || ""}
+          onChange={(e) => {
+            const next = e.target.value;
+            setSearchParams(next ? { projectId: next } : {});
+          }}
+        >
           <option value="">All projects</option>
           {facultyPostings.map((p) => (
             <option key={p.id} value={p.id}>
@@ -301,7 +302,11 @@ function FacultyApplications() {
                           {s}
                         </span>
                       ))}
-                      {(Array.isArray(app.skills) ? app.skills : []).length > 2 && <span className="skills-more">+{(Array.isArray(app.skills) ? app.skills : []).length - 2}</span>}
+                      {(Array.isArray(app.skills) ? app.skills : []).length > 2 && (
+                        <span className="skills-more">
+                          +{(Array.isArray(app.skills) ? app.skills : []).length - 2}
+                        </span>
+                      )}
                     </div>
                   </td>
 
@@ -318,6 +323,7 @@ function FacultyApplications() {
                       ))}
                     </select>
                   </td>
+                  <td>{renderAssessment(app.assessment)}</td>
 
                   <td>{renderAssessment(app.assessment)}</td>
                   <td>{app.gpa ?? "—"}</td>
@@ -354,6 +360,9 @@ function FacultyApplications() {
 
             <h3 className="modal-section-title">Skills</h3>
             <ul className="skills-modal-list">
+              {(Array.isArray(skillsModal.skills) ? skillsModal.skills : []).map((skill) => (
+                <li key={skill}>{skill}</li>
+              ))}
               {(Array.isArray(profileModal.skills) ? profileModal.skills : []).map((skill) => (
                 <li key={skill}>{skill}</li>
               ))}

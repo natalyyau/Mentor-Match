@@ -85,7 +85,6 @@ export default function CreatePosting() {
         // keep empty
       }
     };
-
     fetchExisting();
   }, [editId, userID]);
 
@@ -150,7 +149,7 @@ export default function CreatePosting() {
     if (!validateQuiz()) return;
 
     const payload = {
-      userID: Number.parseInt(userID, 10),
+      userID: parseInt(userID, 10),
       title: title.trim(),
       description: description.trim(),
       skills: selectedSkills,
@@ -165,7 +164,6 @@ export default function CreatePosting() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       const data = await res.json();
 
       if (!res.ok) {
@@ -203,27 +201,21 @@ export default function CreatePosting() {
 
   return (
     <div className="dashboard-page create-posting-page create-project-page">
-      <h1 className="dashboard-title">
-        {editId ? "Edit Project" : "Create Project"}
-      </h1>
+      <h1 className="dashboard-title">{editId ? "Edit Project" : "Create Project"}</h1>
       <p className="dashboard-subtitle">
-        {editId
-          ? "Update your research opportunity"
-          : "Add a new research opportunity for students"}
+        {editId ? "Update your research opportunity" : "Add a new research opportunity for students"}
       </p>
 
       <form className="create-project-form" onSubmit={handleSubmit}>
         <div className="form-section">
+
           <div className="input-group">
             <label htmlFor="project-title">Title</label>
             <input
               id="project-title"
               type="text"
               value={title}
-              onChange={(e) => {
-                setTitle(e.target.value);
-                setError("");
-              }}
+              onChange={(e) => { setTitle(e.target.value); setError(""); }}
               placeholder="e.g. Machine Learning Research Assistant"
               maxLength={200}
             />
