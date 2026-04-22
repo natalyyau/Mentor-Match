@@ -5,11 +5,21 @@ import "./CreatePosting.css";
 import QuizBuilder from "./QuizBuilder";
 
 const API_BASE = "http://127.0.0.1:8000/api";
-
-const AVAILABLE_SKILLS = [
-  "Python", "Java", "C++", "R", "Machine Learning", "Statistics",
-  "Data Analysis", "Natural Language Processing", "Computer Vision",
-  "Research Writing", "Linear Algebra", "Physics", "Biology", "Chemistry",
+const DEFAULT_AVAILABLE_SKILLS = [
+  "Python",
+  "Java",
+  "C++",
+  "R",
+  "Machine Learning",
+  "Statistics",
+  "Data Analysis",
+  "Natural Language Processing",
+  "Computer Vision",
+  "Research Writing",
+  "Linear Algebra",
+  "Physics",
+  "Biology",
+  "Chemistry",
 ];
 
 export default function CreatePosting() {
@@ -18,43 +28,66 @@ export default function CreatePosting() {
   const editId = searchParams.get("edit");
   const userID = localStorage.getItem("userID");
 
+  const [availableSkills, setAvailableSkills] = useState([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedSkills, setSelectedSkills] = useState([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [requiredGPA, setRequiredGPA] = useState("");
+  const [minScore, setMinScore] = useState("");
 
-  // Assessment
   const [requireAssessment, setRequireAssessment] = useState(false);
   const [quizTitle, setQuizTitle] = useState("Qualification Quiz");
   const [questions, setQuestions] = useState([]);
-  const [minScore, setMinScore] = useState("");
+  const displayedSkills =
+    availableSkills.length > 0 ? availableSkills : DEFAULT_AVAILABLE_SKILLS;
+
+  useEffect(() => {
+    const loadSkills = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/skills/`);
+        const data = await res.json();
+        setAvailableSkills(Array.isArray(data.skills) ? data.skills : []);
+      } catch {
+        setAvailableSkills([]);
+      }
+    };
+
+    loadSkills();
+  }, []);
 
   useEffect(() => {
     if (!editId) return;
+
     const fetchExisting = async () => {
       try {
         const res = await fetch(`${API_BASE}/opportunities/${editId}/`);
         const data = await res.json();
+
         if (res.ok && data.opportunity) {
           setTitle(data.opportunity.title || "");
           setDescription(data.opportunity.description || "");
           setSelectedSkills(Array.isArray(data.opportunity.skills) ? data.opportunity.skills : []);
+          setRequiredGPA(data.opportunity.requiredGPA ?? "");
+          setMinScore(data.opportunity.minAssessmentScore ?? "");
         }
-        // Load existing assessment if any
+
         const aRes = await fetch(`${API_BASE}/assessment/${editId}/faculty/?userID=${userID}`);
         const aData = await aRes.json();
+
         if (aData.assessment) {
           setRequireAssessment(true);
           setQuizTitle(aData.assessment.title || "Qualification Quiz");
           setQuestions(aData.assessment.questions || []);
-      }
+        }
       } catch {
-        // keep form empty
+        // keep empty
       }
     };
+
     fetchExisting();
-  }, [editId]);
+  }, [editId, userID]);
 
   const toggleSkill = (skill) => {
     setSelectedSkills((prev) =>
@@ -69,24 +102,27 @@ export default function CreatePosting() {
       setError("Add at least one question to the quiz.");
       return false;
     }
+
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
-      if (!q.questionText.trim()) {
+      if (!q.questionText?.trim()) {
         setError(`Question ${i + 1} is missing text.`);
         return false;
       }
+
       if (q.questionType === "mcq") {
-        const filled = q.choices.filter((c) => c.choiceText.trim());
+        const filled = (q.choices || []).filter((c) => c.choiceText?.trim());
         if (filled.length < 2) {
           setError(`Question ${i + 1} needs at least 2 answer choices.`);
           return false;
         }
-        if (!q.choices.some((c) => c.isCorrect)) {
+        if (!(q.choices || []).some((c) => c.isCorrect)) {
           setError(`Question ${i + 1} needs a correct answer selected.`);
           return false;
         }
       }
     }
+
     return true;
   };
 
@@ -95,47 +131,67 @@ export default function CreatePosting() {
     setError("");
     setSuccess("");
 
-    if (!title.trim()) { setError("Please enter a project title."); return; }
-    if (!description.trim()) { setError("Please enter a description."); return; }
-    if (selectedSkills.length === 0) { setError("Select at least one required skill."); return; }
-    if (!userID) { setError("Please log in as faculty."); return; }
+    if (!title.trim()) {
+      setError("Please enter a project title.");
+      return;
+    }
+    if (!description.trim()) {
+      setError("Please enter a description.");
+      return;
+    }
+    if (selectedSkills.length === 0) {
+      setError("Select at least one required skill.");
+      return;
+    }
+    if (!userID) {
+      setError("Please log in as faculty.");
+      return;
+    }
     if (!validateQuiz()) return;
 
     const payload = {
-      userID: parseInt(userID, 10),
+      userID: Number.parseInt(userID, 10),
       title: title.trim(),
       description: description.trim(),
       skills: selectedSkills,
+      ...(requiredGPA !== "" ? { requiredGPA: Number.parseFloat(requiredGPA) } : {}),
       ...(requireAssessment && minScore !== "" ? { minAssessmentScore: Number.parseInt(minScore, 10) } : {}),
-      ...(editId ? { postingID: parseInt(editId, 10) } : {}),
+      ...(editId ? { postingID: Number.parseInt(editId, 10) } : {}),
     };
 
     try {
-      // 1. Save the posting
       const res = await fetch(`${API_BASE}/opportunities/create/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Failed to save opportunity."); return; }
+
+      if (!res.ok) {
+        setError(data.error || "Failed to save opportunity.");
+        return;
+      }
 
       const postingID = data.opportunity?.id;
 
-      // 2. Save assessment if required
       if (requireAssessment && postingID) {
         const aRes = await fetch(`${API_BASE}/assessment/create/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            userID: parseInt(userID, 10),
+            userID: Number.parseInt(userID, 10),
             postingID,
             title: quizTitle.trim() || "Qualification Quiz",
             questions,
           }),
         });
+
         const aData = await aRes.json();
-        if (!aRes.ok) { setError(aData.error || "Posting saved but quiz failed."); return; }
+        if (!aRes.ok) {
+          setError(aData.error || "Posting saved but quiz failed.");
+          return;
+        }
       }
 
       setSuccess(editId ? "Project updated successfully." : "Project created successfully.");
@@ -147,21 +203,27 @@ export default function CreatePosting() {
 
   return (
     <div className="dashboard-page create-posting-page create-project-page">
-      <h1 className="dashboard-title">{editId ? "Edit Project" : "Create Project"}</h1>
+      <h1 className="dashboard-title">
+        {editId ? "Edit Project" : "Create Project"}
+      </h1>
       <p className="dashboard-subtitle">
-        {editId ? "Update your research opportunity" : "Add a new research opportunity for students"}
+        {editId
+          ? "Update your research opportunity"
+          : "Add a new research opportunity for students"}
       </p>
 
       <form className="create-project-form" onSubmit={handleSubmit}>
         <div className="form-section">
-
           <div className="input-group">
             <label htmlFor="project-title">Title</label>
             <input
               id="project-title"
               type="text"
               value={title}
-              onChange={(e) => { setTitle(e.target.value); setError(""); }}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setError("");
+              }}
               placeholder="e.g. Machine Learning Research Assistant"
               maxLength={200}
             />
@@ -172,7 +234,10 @@ export default function CreatePosting() {
             <textarea
               id="project-description"
               value={description}
-              onChange={(e) => { setDescription(e.target.value); setError(""); }}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setError("");
+              }}
               placeholder="Describe the project, responsibilities, and expectations."
               rows={8}
             />
@@ -182,7 +247,7 @@ export default function CreatePosting() {
             <legend>Required skills</legend>
             <p className="skills-hint">Select all skills students should have.</p>
             <div className="skill-select-grid">
-              {AVAILABLE_SKILLS.map((skill) => (
+              {displayedSkills.map((skill) => (
                 <button
                   key={skill}
                   type="button"
@@ -196,7 +261,20 @@ export default function CreatePosting() {
             </div>
           </fieldset>
 
-          {/* ── Assessment toggle ── */}
+          <div className="input-group">
+            <label htmlFor="required-gpa">Minimum GPA</label>
+            <input
+              id="required-gpa"
+              type="number"
+              min="0"
+              max="4"
+              step="0.01"
+              value={requiredGPA}
+              onChange={(e) => setRequiredGPA(e.target.value)}
+              placeholder="Optional, e.g. 3.20"
+            />
+          </div>
+
           <div className="input-group assessment-toggle-group">
             <label className="assessment-toggle-label">
               <input
@@ -205,18 +283,20 @@ export default function CreatePosting() {
                 onChange={(e) => {
                   setRequireAssessment(e.target.checked);
                   if (e.target.checked && questions.length === 0) {
-                    setQuestions([{
-                      questionText: "",
-                      questionType: "mcq",
-                      points: 1,
-                      correctAnswer: "",
-                      choices: [
-                        { choiceText: "", isCorrect: false },
-                        { choiceText: "", isCorrect: false },
-                        { choiceText: "", isCorrect: false },
-                        { choiceText: "", isCorrect: false },
-                      ],
-                    }]);
+                    setQuestions([
+                      {
+                        questionText: "",
+                        questionType: "mcq",
+                        points: 1,
+                        correctAnswer: "",
+                        choices: [
+                          { choiceText: "", isCorrect: false },
+                          { choiceText: "", isCorrect: false },
+                          { choiceText: "", isCorrect: false },
+                          { choiceText: "", isCorrect: false },
+                        ],
+                      },
+                    ]);
                   }
                 }}
               />
@@ -227,8 +307,9 @@ export default function CreatePosting() {
           {requireAssessment && (
             <div className="quiz-section">
               <div className="input-group">
-                <label>Quiz title</label>
+                <label htmlFor="quiz-title">Quiz title</label>
                 <input
+                  id="quiz-title"
                   type="text"
                   value={quizTitle}
                   onChange={(e) => setQuizTitle(e.target.value)}
@@ -236,18 +317,21 @@ export default function CreatePosting() {
                   maxLength={200}
                 />
               </div>
-            <div className="input-group">
-              <label>Minimum passing score (%)</label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step={1}
-                value={minScore}
-                onChange={(e) => setMinScore(e.target.value)}
-                placeholder="e.g. 70"
-              />
-            </div>
+
+              <div className="input-group">
+                <label htmlFor="min-assessment-score">Minimum assessment score (%)</label>
+                <input
+                  id="min-assessment-score"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={minScore}
+                  onChange={(e) => setMinScore(e.target.value)}
+                  placeholder="e.g. 70"
+                />
+              </div>
+
               <QuizBuilder questions={questions} onChange={setQuestions} />
             </div>
           )}
@@ -259,6 +343,7 @@ export default function CreatePosting() {
             <button type="submit" className="btn">
               {editId ? "Save changes" : "Submit"}
             </button>
+
             {editId && (
               <button
                 type="button"

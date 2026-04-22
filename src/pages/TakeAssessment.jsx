@@ -1,4 +1,3 @@
-// TakeAssessment.jsx — add route: /assessment/:postingId
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./Dashboard.css";
@@ -12,15 +11,14 @@ export default function TakeAssessment() {
   const userID = localStorage.getItem("userID");
 
   const [assessment, setAssessment] = useState(null);
-  const [answers, setAnswers] = useState({});     // { questionID: { selectedChoiceID | textAnswer } }
+  const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState(null);     // { score, passed, earnedPoints, totalPoints }
+  const [result, setResult] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     const load = async () => {
-      // Check if already attempted
       const aRes = await fetch(`${API_BASE}/assessment/attempt/?userID=${userID}&postingID=${postingId}`);
       const aData = await aRes.json();
 
@@ -30,12 +28,12 @@ export default function TakeAssessment() {
         return;
       }
 
-      // Load questions
       const res = await fetch(`${API_BASE}/assessment/${postingId}/`);
       const data = await res.json();
       setAssessment(data.assessment);
       setLoading(false);
     };
+
     if (userID && postingId) load();
   }, [userID, postingId]);
 
@@ -50,7 +48,6 @@ export default function TakeAssessment() {
   const handleSubmit = async () => {
     setError("");
 
-    // Validate all answered
     const unanswered = assessment.questions.filter((q) => !answers[q.questionID]);
     if (unanswered.length > 0) {
       setError(`Please answer all questions. (${unanswered.length} remaining)`);
@@ -74,8 +71,13 @@ export default function TakeAssessment() {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Submission failed."); return; }
-      setResult(data);
+
+      if (!res.ok) {
+        setError(data.error || "Submission failed.");
+        return;
+      }
+
+      setResult(data.attempt || null);
     } catch {
       setError("Could not submit. Please try again.");
     } finally {
@@ -85,22 +87,48 @@ export default function TakeAssessment() {
 
   if (loading) return <div className="dashboard-page"><p>Loading assessment...</p></div>;
 
-  // Already completed — show score
   if (result) {
     const passed = result.passed;
+    const pending = result.gradingStatus === "pending";
+
     return (
       <div className="dashboard-page ta-result-page">
         <div className="ta-result-card">
-          <div className={`ta-result-icon ${passed === true ? "pass" : passed === false ? "fail" : "neutral"}`}>
-            {passed === true ? "✓" : passed === false ? "✗" : "✓"}
+          <div className={`ta-result-icon ${pending ? "neutral" : passed === true ? "pass" : passed === false ? "fail" : "neutral"}`}>
+            {pending ? "…" : passed === true ? "✓" : passed === false ? "✗" : "✓"}
           </div>
+
           <h1 className="ta-result-title">Assessment Complete</h1>
+
           <div className="ta-score-display">
-            <span className="ta-score-number">{typeof result.score === "number" ? result.score.toFixed(1) : result.score}%</span>
+            <span className="ta-score-number">
+              {pending
+                ? "Pending"
+                : typeof result.score === "number"
+                  ? result.score.toFixed(1)
+                  : result.score}
+              {!pending && "%"}
+            </span>
           </div>
-          {passed === true && <p className="ta-result-msg pass-msg">You passed! The faculty will review your application.</p>}
-          {passed === false && <p className="ta-result-msg fail-msg">You didn't meet the minimum score, but your application is still on record.</p>}
-          {passed === null && <p className="ta-result-msg">Your responses have been recorded.</p>}
+
+          {pending && (
+            <p className="ta-result-msg">
+              Your responses were submitted successfully and are waiting for faculty review.
+            </p>
+          )}
+
+          {!pending && passed === true && (
+            <p className="ta-result-msg pass-msg">
+              You passed! The faculty can now review your application.
+            </p>
+          )}
+
+          {!pending && passed === false && (
+            <p className="ta-result-msg fail-msg">
+              You did not meet the minimum score requirement.
+            </p>
+          )}
+
           <button className="btn" onClick={() => navigate("/student/applications")}>
             Back to my applications
           </button>
@@ -128,12 +156,14 @@ export default function TakeAssessment() {
         <p className="dashboard-subtitle">
           {assessment.questions.length} questions · {totalPoints} points total
         </p>
+
         <div className="ta-progress-bar">
           <div
             className="ta-progress-fill"
             style={{ width: `${(answeredCount / assessment.questions.length) * 100}%` }}
           />
         </div>
+
         <p className="ta-progress-label">{answeredCount} / {assessment.questions.length} answered</p>
       </div>
 
@@ -144,6 +174,7 @@ export default function TakeAssessment() {
               <span className="ta-q-number">Q{idx + 1}</span>
               <span className="ta-q-points">{q.points} pt{q.points !== 1 ? "s" : ""}</span>
             </div>
+
             <p className="ta-question-text">{q.questionText}</p>
 
             {q.questionType === "mcq" && (
@@ -182,19 +213,10 @@ export default function TakeAssessment() {
       {error && <p className="create-project-error">{error}</p>}
 
       <div className="ta-submit-row">
-        <button
-          className="btn btn-outline"
-          type="button"
-          onClick={() => navigate(-1)}
-        >
+        <button className="btn btn-outline" type="button" onClick={() => navigate(-1)}>
           Cancel
         </button>
-        <button
-          className="btn"
-          type="button"
-          onClick={handleSubmit}
-          disabled={submitting}
-        >
+        <button className="btn" type="button" onClick={handleSubmit} disabled={submitting}>
           {submitting ? "Submitting..." : "Submit assessment"}
         </button>
       </div>

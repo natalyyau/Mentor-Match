@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from typing import Optional
 
 from django.contrib.auth.hashers import check_password, make_password
 from django.db import IntegrityError
@@ -19,8 +20,8 @@ from .models import (
     Users,
     Assessments,
     AssessmentAttempts,
-    Choices,
     Questions,
+    Choices,
     StudentAnswers,
 )
 
@@ -35,14 +36,44 @@ YEAR_TO_GRAD_OFFSET = {
 }
 
 
+SKILL_POOL = [
+    "Python",
+    "Java",
+    "C++",
+    "R",
+    "Machine Learning",
+    "Statistics",
+    "Data Analysis",
+    "Natural Language Processing",
+    "Computer Vision",
+    "Research Writing",
+    "Linear Algebra",
+    "Physics",
+    "Biology",
+    "Chemistry",
+]
+
+
 def _clean_text(value, default=""):
     return str(value or default).strip()
+
+
+def _normalize_skill_name(skill):
+    return " ".join(part.capitalize() for part in _clean_text(skill).split())
 
 
 def _normalize_skill_list(skills):
     if isinstance(skills, str):
         skills = [part.strip() for part in skills.split(",")]
-    return [str(skill).strip() for skill in (skills or []) if str(skill).strip()]
+
+    cleaned = []
+    seen = set()
+    for skill in (skills or []):
+        normalized = _normalize_skill_name(skill)
+        if normalized and normalized.lower() not in seen:
+            cleaned.append(normalized)
+            seen.add(normalized.lower())
+    return cleaned
 
 
 def _get_or_create_department(name: str, college_name: str = "General"):
@@ -50,7 +81,10 @@ def _get_or_create_department(name: str, college_name: str = "General"):
     department = Department.objects.filter(deptName__iexact=dept_name).first()
     if department:
         return department
-    return Department.objects.create(deptName=dept_name, collegeName=_clean_text(college_name) or "General")
+    return Department.objects.create(
+        deptName=dept_name,
+        collegeName=_clean_text(college_name) or "General"
+    )
 
 
 def _student_graduation_year(year_label: str):
@@ -105,12 +139,147 @@ def _posting_skill_names(posting: ResearchPostings):
     )
 
 
+def _get_latest_assessment_attempt(student: Students, posting: ResearchPostings):
+    assessment = Assessments.objects.filter(postingID=posting).first()
+    if not assessment:
+        return None, None
+
+    attempt = (
+        AssessmentAttempts.objects.filter(studentID=student, assessmentID=assessment)
+        .order_by("-attemptDate", "-attemptID")
+        .first()
+    )
+    return assessment, attempt
+
+
+def _build_attempt_summary(attempt: Optional[AssessmentAttempts]):
+    if not attempt:
+        return None
+
+    answers = []
+    for answer in StudentAnswers.objects.filter(attemptID=attempt).select_related("questionID", "selectedChoice"):
+        answers.append({
+            "answerID": answer.answerID,
+            "questionID": answer.questionID.questionID,
+            "questionText": answer.questionID.questionText,
+            "questionType": answer.questionID.questionType,
+            "maxPoints": answer.questionID.points,
+            "selectedChoiceID": answer.selectedChoice.choiceID if answer.selectedChoice else None,
+            "selectedChoiceText": answer.selectedChoice.choiceText if answer.selectedChoice else None,
+            "textAnswer": answer.textAnswer,
+            "isCorrect": answer.isCorrect,
+            "awardedPoints": float(answer.awardedPoints) if answer.awardedPoints is not None else None,
+            "instructorFeedback": answer.instructorFeedback or "",
+            "needsManualReview": answer.questionID.questionType == "short",
+        })
+
+    return {
+        "attemptID": attempt.attemptID,
+        "score": float(attempt.score) if attempt.score is not None else None,
+        "passed": attempt.passed,
+        "gradingStatus": attempt.gradingStatus,
+        "earnedPoints": float(attempt.earnedPoints),
+        "maxPoints": float(attempt.maxPoints),
+        "attemptDate": attempt.attemptDate.isoformat() if attempt.attemptDate else None,
+        "answers": answers,
+    }
+
+
+def _recalculate_attempt(attempt: AssessmentAttempts):
+    answers = StudentAnswers.objects.filter(attemptID=attempt).select_related("questionID")
+    total_points = 0
+    earned_points = 0
+    pending_manual_review = False
+
+    for answer in answers:
+        total_points += answer.questionID.points
+        if answer.awardedPoints is None:
+            pending_manual_review = True
+        else:
+            earned_points += float(answer.awardedPoints)
+
+    attempt.maxPoints = total_points
+    attempt.earnedPoints = earned_points
+
+    if pending_manual_review:
+        attempt.score = None
+        attempt.passed = None
+        attempt.gradingStatus = "pending"
+    else:
+        score = round((earned_points / total_points) * 100, 2) if total_points > 0 else 0
+        posting = attempt.assessmentID.postingID
+        attempt.score = score
+        attempt.passed = score >= posting.minAssessmentScore if posting.minAssessmentScore is not None else None
+        attempt.gradingStatus = "graded"
+
+    attempt.save()
+
+
+def _evaluate_posting_prerequisites(student: Students, posting: ResearchPostings) -> dict:
+    student_skills = {skill.lower() for skill in _student_skill_names(student)}
+    required_skills = _posting_skill_names(posting)
+    missing_skills = [skill for skill in required_skills if skill.lower() not in student_skills]
+
+    assessment, attempt = _get_latest_assessment_attempt(student, posting)
+
+    checks = {
+        "gpaMet": posting.requiredGPA is None or (student.gpa is not None and student.gpa >= posting.requiredGPA),
+        "skillsMet": len(missing_skills) == 0,
+        "assessmentMet": True,
+    }
+    reasons = []
+
+    if not checks["gpaMet"]:
+        if student.gpa is None:
+            reasons.append("A GPA is required before you can apply.")
+        else:
+            reasons.append(f"Minimum GPA for this opportunity is {posting.requiredGPA}.")
+
+    if not checks["skillsMet"]:
+        reasons.append("Missing required skills: " + ", ".join(missing_skills))
+
+    if posting.minAssessmentScore is not None:
+        if not assessment:
+            checks["assessmentMet"] = False
+            reasons.append("This opportunity requires an assessment, but none is available yet.")
+        elif not attempt:
+            checks["assessmentMet"] = False
+            reasons.append("You must complete the assessment before applying.")
+        elif attempt.gradingStatus == "pending":
+            checks["assessmentMet"] = True
+            reasons.append("Assessment submitted and waiting for faculty review.")
+        elif attempt.score is None or float(attempt.score) < float(posting.minAssessmentScore):
+            checks["assessmentMet"] = False
+            latest_score = float(attempt.score) if attempt.score is not None else 0
+            reasons.append(
+                f"Your latest assessment score was {latest_score:.2f}%. Minimum required is {posting.minAssessmentScore}%."
+            )
+
+    eligible = all(checks.values())
+    return {
+        "eligible": eligible,
+        "checks": checks,
+        "missingSkills": missing_skills,
+        "requiredSkills": required_skills,
+        "assessment": {
+            "required": posting.minAssessmentScore is not None,
+            "assessmentID": assessment.assessmentID if assessment else None,
+            "title": assessment.title if assessment else None,
+            "minimumScore": posting.minAssessmentScore,
+            "latestScore": float(attempt.score) if attempt and attempt.score is not None else None,
+            "attempted": bool(attempt),
+            "passed": attempt.passed if attempt else None,
+            "gradingStatus": attempt.gradingStatus if attempt else None,
+        },
+        "reasons": reasons,
+    }
+
+
 def _calculate_relevance(student: Students, posting: ResearchPostings) -> int:
     score = 0
 
     student_skills = {skill.lower() for skill in _student_skill_names(student)}
     posting_skills = {skill.lower() for skill in _posting_skill_names(posting)}
-
     score += len(student_skills & posting_skills) * 10
 
     student_major = _clean_text(student.major).lower()
@@ -135,7 +304,7 @@ def _calculate_relevance(student: Students, posting: ResearchPostings) -> int:
     return score
 
 
-def _serialize_posting(posting: ResearchPostings, student: Students | None = None) -> dict:
+def _serialize_posting(posting: ResearchPostings, student: Optional[Students] = None) -> dict:
     faculty_name = None
     if posting.facultyID_id is not None and posting.facultyID.userID_id is not None:
         faculty_name = posting.facultyID.userID.fullName
@@ -144,6 +313,7 @@ def _serialize_posting(posting: ResearchPostings, student: Students | None = Non
     skills = _posting_skill_names(posting)
     description = posting.description or ""
     relevance_score = _calculate_relevance(student, posting) if student else 0
+    eligibility = _evaluate_posting_prerequisites(student, posting) if student else None
 
     return {
         "id": posting.postingID,
@@ -159,7 +329,18 @@ def _serialize_posting(posting: ResearchPostings, student: Students | None = Non
         "deadline": posting.deadline.isoformat() if posting.deadline else None,
         "createdAt": posting.createdAt.isoformat() if posting.createdAt else None,
         "relevanceScore": relevance_score,
+        "requiredGPA": float(posting.requiredGPA) if posting.requiredGPA is not None else None,
+        "minAssessmentScore": posting.minAssessmentScore,
+        "prerequisites": posting.prerequisites or "",
+        "eligibility": eligibility,
     }
+
+
+@api_view(["GET"])
+def skill_pool(request):
+    db_skills = list(Skills.objects.order_by("skillName").values_list("skillName", flat=True))
+    merged = sorted({*SKILL_POOL, *db_skills}, key=lambda value: value.lower())
+    return Response({"skills": merged})
 
 
 @api_view(["POST"])
@@ -207,6 +388,7 @@ def register(request):
         else:
             department_name = _clean_text(data.get("department"))
             title = _clean_text(data.get("position") or data.get("title") or "Professor")
+
             if not department_name:
                 raise ValueError("Department is required for faculty")
 
@@ -255,7 +437,11 @@ def opportunities_list(request):
     user_id = request.query_params.get("userID")
 
     if search:
-        qs = qs.filter(Q(title__icontains=search) | Q(description__icontains=search) | Q(prerequisites__icontains=search))
+        qs = qs.filter(
+            Q(title__icontains=search) |
+            Q(description__icontains=search) |
+            Q(prerequisites__icontains=search)
+        )
     if department:
         qs = qs.filter(deptID__deptName__icontains=department)
     if duration:
@@ -267,6 +453,7 @@ def opportunities_list(request):
 
     student = _get_student_by_user_id(int(user_id)) if user_id and str(user_id).isdigit() else None
     postings = list(qs)
+
     if student:
         postings.sort(key=lambda posting: (-_calculate_relevance(student, posting), -(posting.postingID or 0)))
     else:
@@ -315,6 +502,11 @@ def opportunities_create_or_update(request):
         deadline = _deadline_from_duration(duration)
 
     posting_id = data.get("postingID") or data.get("id")
+    required_gpa = data.get("requiredGPA") or None
+    min_assessment_score = data.get("minAssessmentScore")
+    if min_assessment_score in ("", None):
+        min_assessment_score = None
+
     if posting_id:
         try:
             posting = ResearchPostings.objects.get(postingID=int(posting_id), facultyID=faculty)
@@ -324,7 +516,8 @@ def opportunities_create_or_update(request):
         posting.title = title
         posting.description = description
         posting.prerequisites = _clean_text(data.get("prerequisites")) or None
-        posting.requiredGPA = data.get("requiredGPA") or None
+        posting.requiredGPA = required_gpa
+        posting.minAssessmentScore = min_assessment_score
         posting.status = duration
         posting.deadline = deadline
         posting.deptID = faculty.deptID
@@ -336,7 +529,8 @@ def opportunities_create_or_update(request):
             title=title,
             description=description,
             prerequisites=_clean_text(data.get("prerequisites")) or None,
-            requiredGPA=data.get("requiredGPA") or None,
+            requiredGPA=required_gpa,
+            minAssessmentScore=min_assessment_score,
             status=duration,
             deadline=deadline,
         )
@@ -392,12 +586,27 @@ def apply_to_opportunity(request):
     if Applications.objects.filter(studentID=student, postingID=posting).exists():
         return Response({"error": "You are already applied to this opportunity"}, status=400)
 
+    eligibility = _evaluate_posting_prerequisites(student, posting)
+    if not eligibility["eligible"]:
+        return Response({
+            "error": "You do not meet the prerequisites for this opportunity.",
+            "eligibility": eligibility,
+        }, status=400)
+
+    email = _clean_text(data.get("email") or student.userID.email)
+    statement = _clean_text(data.get("statementOfInterest"))
+
+    assessment, attempt = _get_latest_assessment_attempt(student, posting)
+    pending_manual_review = bool(attempt and attempt.gradingStatus == "pending")
+
     app = Applications.objects.create(
         studentID=student,
         postingID=posting,
         submissionDate=date.today(),
-        status="New",
-        prerequisitesVerified=False,
+        status="Under Review" if pending_manual_review else "New",
+        prerequisitesVerified=False if pending_manual_review else True,
+        email=email,
+        statementOfInterest=statement,
     )
 
     return Response({"message": "Application submitted successfully", "applicationID": app.applicationID}, status=201)
@@ -429,11 +638,16 @@ def my_applications(request):
     if not student:
         return Response({"applications": []})
 
-    apps = Applications.objects.filter(studentID=student).select_related("postingID__facultyID__userID", "postingID__deptID").order_by("-submissionDate")
+    apps = Applications.objects.filter(studentID=student).select_related(
+        "postingID__facultyID__userID",
+        "postingID__deptID",
+    ).order_by("-submissionDate")
 
     enriched = []
     for app in apps:
         posting = app.postingID
+        assessment, attempt = _get_latest_assessment_attempt(student, posting)
+
         enriched.append({
             "applicationId": app.applicationID,
             "projectId": posting.postingID,
@@ -443,6 +657,7 @@ def my_applications(request):
             "faculty": posting.facultyID.userID.fullName,
             "department": posting.deptID.deptName,
             "skills": _posting_skill_names(posting),
+            "assessment": _build_attempt_summary(attempt) if assessment else None,
         })
 
     return Response({"applications": enriched})
@@ -458,8 +673,12 @@ def my_postings(request):
     if not faculty:
         return Response({"postings": []})
 
-    postings = ResearchPostings.objects.filter(facultyID=faculty).select_related("facultyID__userID", "deptID").order_by("-createdAt")
-    return Response({"postings": [_serialize_posting(p) for p in postings]})
+    postings = ResearchPostings.objects.filter(facultyID=faculty).select_related(
+        "facultyID__userID",
+        "deptID",
+    ).order_by("-createdAt")
+
+    return Response({"postings": [_serialize_posting(posting) for posting in postings]})
 
 
 @api_view(["GET"])
@@ -477,40 +696,32 @@ def faculty_applications(request):
     if project_id and str(project_id).isdigit():
         postings_qs = postings_qs.filter(postingID=int(project_id))
 
-    apps = Applications.objects.filter(postingID__in=postings_qs).select_related("studentID__userID", "postingID__facultyID__userID", "postingID__deptID").order_by("-submissionDate")
+    apps = Applications.objects.filter(postingID__in=postings_qs).select_related(
+        "studentID__userID",
+        "postingID__facultyID__userID",
+        "postingID__deptID",
+    ).order_by("-submissionDate")
 
     enriched = []
     for app in apps:
         student = app.studentID
         posting = app.postingID
-
-        # ── Assessment score ──
-        assessment_score = None
-        try:
-            assessment = Assessments.objects.get(postingID=posting)
-            attempt = AssessmentAttempts.objects.filter(
-                studentID=student, assessmentID=assessment
-            ).first()
-            if attempt:
-                assessment_score = {
-                    "score": float(attempt.score),
-                    "passed": attempt.passed,
-                }
-        except Assessments.DoesNotExist:
-            pass
+        assessment, attempt = _get_latest_assessment_attempt(student, posting)
 
         enriched.append({
             "id": app.applicationID,
             "applicationId": app.applicationID,
             "student": student.userID.fullName,
-            "email": student.userID.email,
+            "email": app.email or student.userID.email,
+            "statementOfInterest": app.statementOfInterest,
             "position": posting.title,
             "skills": _student_skill_names(student),
-            "assessment": assessment_score,
+            "assessment": _build_attempt_summary(attempt) if assessment else None,
             "gpa": float(student.gpa) if student.gpa is not None else None,
             "appliedDate": app.submissionDate.isoformat(),
             "status": app.status,
             "projectId": posting.postingID,
+            "prerequisitesVerified": app.prerequisitesVerified,
         })
 
     return Response({"applications": enriched})
@@ -532,74 +743,68 @@ def update_application_status(request):
         return Response({"error": "Faculty not found for this userID"}, status=400)
 
     try:
-        application = Applications.objects.select_related("postingID").get(applicationID=int(application_id), postingID__facultyID=faculty)
+        application = Applications.objects.select_related("postingID").get(
+            applicationID=int(application_id),
+            postingID__facultyID=faculty,
+        )
     except Applications.DoesNotExist:
         return Response({"error": "Application not found"}, status=404)
 
     application.status = status
     application.save(update_fields=["status"])
-    return Response({"message": "Application status updated successfully", "applicationId": application.applicationID, "status": application.status})
+
+    return Response({
+        "message": "Application status updated successfully",
+        "applicationId": application.applicationID,
+        "status": application.status,
+    })
+
 
 @api_view(["POST"])
 def create_assessment(request):
-    """
-    Faculty creates an assessment for a posting.
-    Called right after creating a posting.
- 
-    Body: {
-        postingID, title,
-        questions: [
-            {
-                questionText, questionType ("mcq"|"short"), points,
-                correctAnswer,          # short answer only
-                choices: [              # mcq only
-                    { choiceText, isCorrect }
-                ]
-            }
-        ]
-    }
-    """
     data = request.data or {}
     user_id = data.get("userID")
     posting_id = data.get("postingID")
     title = _clean_text(data.get("title") or "Assessment")
     questions_data = data.get("questions", [])
- 
+
     if not user_id or not posting_id:
         return Response({"error": "userID and postingID are required"}, status=400)
     if not questions_data:
         return Response({"error": "At least one question is required"}, status=400)
- 
+
     faculty = _get_faculty_by_user_id(int(user_id))
     if not faculty:
         return Response({"error": "Faculty not found"}, status=400)
- 
+
     try:
         posting = ResearchPostings.objects.get(postingID=int(posting_id), facultyID=faculty)
     except ResearchPostings.DoesNotExist:
         return Response({"error": "Posting not found"}, status=404)
- 
-    # Delete existing assessment for this posting if re-creating
+
     Assessments.objects.filter(postingID=posting).delete()
- 
     assessment = Assessments.objects.create(postingID=posting, title=title)
- 
+
     for q_data in questions_data:
         q_text = _clean_text(q_data.get("questionText"))
         q_type = _clean_text(q_data.get("questionType"))
         points = int(q_data.get("points") or 1)
- 
+
         if not q_text or q_type not in ("mcq", "short"):
             continue
- 
+
+        correct_answer = _clean_text(q_data.get("correctAnswer"))
+        if q_type == "short" and not correct_answer:
+            correct_answer = None
+
         question = Questions.objects.create(
             assessmentID=assessment,
             questionText=q_text,
             questionType=q_type,
-            correctAnswer=_clean_text(q_data.get("correctAnswer")) or None,
+            correctAnswer=correct_answer,
             points=points,
         )
- 
+
         if q_type == "mcq":
             for choice_data in q_data.get("choices", []):
                 choice_text = _clean_text(choice_data.get("choiceText"))
@@ -609,22 +814,17 @@ def create_assessment(request):
                         choiceText=choice_text,
                         isCorrect=bool(choice_data.get("isCorrect", False)),
                     )
- 
+
     return Response({"message": "Assessment created", "assessmentID": assessment.assessmentID}, status=201)
- 
- 
+
+
 @api_view(["GET"])
 def get_assessment(request, posting_id: int):
-    """
-    Returns the assessment (with questions + choices) for a posting.
-    Used by students before taking it.
-    Does NOT include correct answers.
-    """
     try:
         assessment = Assessments.objects.get(postingID_id=posting_id)
     except Assessments.DoesNotExist:
         return Response({"assessment": None})
- 
+
     questions = []
     for q in Questions.objects.filter(assessmentID=assessment).order_by("questionID"):
         q_data = {
@@ -641,7 +841,7 @@ def get_assessment(request, posting_id: int):
                     "choiceText": c.choiceText,
                 })
         questions.append(q_data)
- 
+
     return Response({
         "assessment": {
             "assessmentID": assessment.assessmentID,
@@ -650,11 +850,9 @@ def get_assessment(request, posting_id: int):
         }
     })
 
+
 @api_view(["GET"])
 def get_assessment_faculty(request, posting_id: int):
-    """
-    Returns full assessment including correct answers — for faculty editing only.
-    """
     user_id = request.query_params.get("userID")
     if not user_id:
         return Response({"error": "userID required"}, status=400)
@@ -668,7 +866,6 @@ def get_assessment_faculty(request, posting_id: int):
     except Assessments.DoesNotExist:
         return Response({"assessment": None})
 
-    # Verify this faculty owns the posting
     if assessment.postingID.facultyID != faculty:
         return Response({"error": "Unauthorized"}, status=403)
 
@@ -687,7 +884,7 @@ def get_assessment_faculty(request, posting_id: int):
                 q_data["choices"].append({
                     "choiceID": c.choiceID,
                     "choiceText": c.choiceText,
-                    "isCorrect": c.isCorrect,  # ← included for faculty
+                    "isCorrect": c.isCorrect,
                 })
         questions.append(q_data)
 
@@ -698,143 +895,222 @@ def get_assessment_faculty(request, posting_id: int):
             "questions": questions,
         }
     })
- 
- 
+
+
 @api_view(["POST"])
 def submit_assessment(request):
-    """
-    Student submits answers.
- 
-    Body: {
-        userID, assessmentID,
-        answers: [
-            { questionID, selectedChoiceID }   # mcq
-            { questionID, textAnswer }          # short
-        ]
-    }
-    """
     data = request.data or {}
     user_id = data.get("userID")
     assessment_id = data.get("assessmentID")
     answers = data.get("answers", [])
- 
+
     if not user_id or not assessment_id:
         return Response({"error": "userID and assessmentID are required"}, status=400)
- 
+
     student = _get_student_by_user_id(int(user_id))
     if not student:
         return Response({"error": "Student not found"}, status=400)
- 
+
     try:
         assessment = Assessments.objects.get(assessmentID=int(assessment_id))
     except Assessments.DoesNotExist:
         return Response({"error": "Assessment not found"}, status=404)
- 
-    # Prevent re-taking
+
     if AssessmentAttempts.objects.filter(studentID=student, assessmentID=assessment).exists():
         return Response({"error": "You have already completed this assessment"}, status=400)
- 
-    # Grade
-    total_points = 0
-    earned_points = 0
- 
+
     attempt = AssessmentAttempts.objects.create(
         studentID=student,
         assessmentID=assessment,
-        score=0,
+        score=None,
         passed=None,
+        gradingStatus="graded",
+        maxPoints=0,
+        earnedPoints=0,
     )
- 
+
+    has_manual_review = False
+
     for ans in answers:
         question_id = ans.get("questionID")
         try:
             question = Questions.objects.get(questionID=int(question_id), assessmentID=assessment)
         except Questions.DoesNotExist:
             continue
- 
-        total_points += question.points
+
         selected_choice = None
-        is_correct = False
- 
+        text_answer = None
+        is_correct = None
+        awarded_points = None
+
         if question.questionType == "mcq":
             choice_id = ans.get("selectedChoiceID")
             if choice_id:
                 try:
                     selected_choice = Choices.objects.get(choiceID=int(choice_id), questionID=question)
                     is_correct = selected_choice.isCorrect
+                    awarded_points = question.points if selected_choice.isCorrect else 0
                 except Choices.DoesNotExist:
-                    pass
-            StudentAnswers.objects.create(
-                attemptID=attempt,
-                questionID=question,
-                selectedChoice=selected_choice,
-            )
+                    selected_choice = None
+                    is_correct = False
+                    awarded_points = 0
+            else:
+                is_correct = False
+                awarded_points = 0
+
         else:
-            # Short answer: store text, no auto-grade
-            text = _clean_text(ans.get("textAnswer"))
-            StudentAnswers.objects.create(
-                attemptID=attempt,
-                questionID=question,
-                textAnswer=text,
-            )
-            # Partial credit: simple case-insensitive match if correctAnswer set
-            if question.correctAnswer and text.lower() == question.correctAnswer.strip().lower():
-                is_correct = True
- 
-        if is_correct:
-            earned_points += question.points
- 
-    score = round((earned_points / total_points) * 100, 2) if total_points > 0 else 0
- 
-    # Check against posting's minAssessmentScore
-    posting = assessment.postingID
-    passed = None
-    if posting.minAssessmentScore is not None:
-        passed = score >= posting.minAssessmentScore
- 
-    attempt.score = score
-    attempt.passed = passed
-    attempt.save()
- 
+            text_answer = _clean_text(ans.get("textAnswer"))
+            if question.correctAnswer:
+                is_correct = text_answer.lower() == question.correctAnswer.strip().lower()
+                awarded_points = question.points if is_correct else 0
+            else:
+                has_manual_review = True
+                is_correct = None
+                awarded_points = None
+
+        StudentAnswers.objects.create(
+            attemptID=attempt,
+            questionID=question,
+            selectedChoice=selected_choice,
+            textAnswer=text_answer,
+            isCorrect=is_correct,
+            awardedPoints=awarded_points,
+        )
+
+    if has_manual_review:
+        attempt.gradingStatus = "pending"
+        attempt.save(update_fields=["gradingStatus"])
+
+    _recalculate_attempt(attempt)
+
     return Response({
         "message": "Assessment submitted",
-        "score": score,
-        "passed": passed,
-        "earnedPoints": earned_points,
-        "totalPoints": total_points,
+        "attempt": _build_attempt_summary(attempt),
+        "score": float(attempt.score) if attempt.score is not None else None,
+        "passed": attempt.passed,
+        "earnedPoints": float(attempt.earnedPoints),
+        "totalPoints": float(attempt.maxPoints),
+        "gradingStatus": attempt.gradingStatus,
     }, status=201)
- 
- 
+
+
+@api_view(["POST"])
+def grade_assessment_attempt(request):
+    data = request.data or {}
+    user_id = data.get("userID")
+    attempt_id = data.get("attemptID")
+    answers = data.get("answers", [])
+
+    if not user_id or not attempt_id:
+        return Response({"error": "userID and attemptID are required"}, status=400)
+
+    faculty = _get_faculty_by_user_id(int(user_id))
+    if not faculty:
+        return Response({"error": "Faculty not found"}, status=403)
+
+    try:
+        attempt = AssessmentAttempts.objects.select_related("assessmentID__postingID").get(attemptID=int(attempt_id))
+    except AssessmentAttempts.DoesNotExist:
+        return Response({"error": "Attempt not found"}, status=404)
+
+    if attempt.assessmentID.postingID.facultyID != faculty:
+        return Response({"error": "Unauthorized"}, status=403)
+
+    for answer_payload in answers:
+        answer_id = answer_payload.get("answerID")
+        if not answer_id:
+            continue
+
+        try:
+            answer = StudentAnswers.objects.select_related("questionID").get(
+                answerID=int(answer_id),
+                attemptID=attempt,
+            )
+        except StudentAnswers.DoesNotExist:
+            continue
+
+        if answer.questionID.questionType != "short":
+            continue
+
+        awarded_points = answer_payload.get("awardedPoints")
+        feedback = _clean_text(answer_payload.get("instructorFeedback"))
+
+        if awarded_points in (None, ""):
+            awarded_points = None
+        else:
+            awarded_points = float(awarded_points)
+            if awarded_points < 0:
+                awarded_points = 0
+            if awarded_points > answer.questionID.points:
+                awarded_points = answer.questionID.points
+
+        answer.awardedPoints = awarded_points
+        answer.instructorFeedback = feedback
+        if awarded_points is None:
+            answer.isCorrect = None
+        else:
+            answer.isCorrect = awarded_points >= answer.questionID.points
+        answer.save()
+
+    _recalculate_attempt(attempt)
+
+    posting = attempt.assessmentID.postingID
+    student = attempt.studentID
+
+    application = Applications.objects.filter(
+        studentID=student,
+        postingID=posting
+    ).first()
+
+    if application:
+        if posting.minAssessmentScore is None:
+            application.prerequisitesVerified = True
+            if application.status == "New":
+                application.status = "Under Review"
+        else:
+            meets_score = (
+                attempt.score is not None and
+                float(attempt.score) >= float(posting.minAssessmentScore)
+            )
+
+            if meets_score:
+                application.prerequisitesVerified = True
+                if application.status in ["New", "Under Review"]:
+                    application.status = "Under Review"
+            else:
+                application.prerequisitesVerified = False
+                application.status = "Rejected"
+
+        application.save()
+
+    return Response({
+        "message": "Assessment graded successfully",
+        "attempt": _build_attempt_summary(attempt),
+    })
+
+
 @api_view(["GET"])
 def get_attempt(request):
-    """
-    Check if a student already attempted an assessment for a posting.
-    GET /api/assessment/attempt/?userID=X&postingID=Y
-    """
     user_id = request.query_params.get("userID")
     posting_id = request.query_params.get("postingID")
- 
+
     if not user_id or not posting_id:
         return Response({"attempt": None})
- 
+
     student = _get_student_by_user_id(int(user_id))
     if not student:
         return Response({"attempt": None})
- 
+
     try:
         assessment = Assessments.objects.get(postingID_id=int(posting_id))
     except Assessments.DoesNotExist:
         return Response({"attempt": None, "hasAssessment": False})
- 
+
     attempt = AssessmentAttempts.objects.filter(studentID=student, assessmentID=assessment).first()
     if not attempt:
         return Response({"attempt": None, "hasAssessment": True, "assessmentID": assessment.assessmentID})
- 
+
     return Response({
         "hasAssessment": True,
-        "attempt": {
-            "score": float(attempt.score),
-            "passed": attempt.passed,
-            "attemptDate": attempt.attemptDate.isoformat(),
-        }
+        "attempt": _build_attempt_summary(attempt),
     })

@@ -14,23 +14,32 @@ function ProjectDetails() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [confirmMessage, setConfirmMessage] = useState("");
+  const [appEmail, setAppEmail] = useState("");
+  const [statement, setStatement] = useState("");
 
   const userID = localStorage.getItem("userID");
 
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        const res = await fetch(`${API_BASE}/opportunities/${id}/`);
+        const suffix = userID ? `?userID=${userID}` : "";
+        const res = await fetch(`${API_BASE}/opportunities/${id}/${suffix}`);
         const data = await res.json();
-        if (res.ok) setProject(data.opportunity || null);
-        else setProject(null);
+        if (res.ok) {
+          setProject(data.opportunity || null);
+          if (data.opportunity?.eligibility?.reasons?.length) {
+            setError(data.opportunity.eligibility.reasons.join(" "));
+          } else {
+            setError("");
+          }
+        } else setProject(null);
       } catch {
         setProject(null);
       }
     };
 
     fetchProject();
-  }, [id]);
+  }, [id, userID]);
 
   useEffect(() => {
     const checkApplied = async () => {
@@ -42,11 +51,15 @@ function ProjectDetails() {
         const data = await res.json();
         if (data.applied) setApplied(true);
       } catch {
-        // If this check fails, we just leave "applied" as false.
+        // no-op
       }
     };
     checkApplied();
   }, [userID, project]);
+
+  const canApply = Boolean(project?.eligibility?.eligible ?? true);
+  const assessmentRequired = Boolean(project?.eligibility?.assessment?.required);
+  const shouldShowAssessmentButton = assessmentRequired && !project?.eligibility?.assessment?.attempted;
 
   const handleApply = async () => {
     if (!userID) {
@@ -54,7 +67,16 @@ function ProjectDetails() {
       navigate("/login");
       return;
     }
-    if (applied) return;
+    if (applied || !canApply) return;
+
+    if (!appEmail.trim()) {
+      setError("Please provide your email.");
+      return;
+    }
+    if (!statement.trim()) {
+      setError("Please provide a brief statement of interest.");
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -67,6 +89,8 @@ function ProjectDetails() {
         body: JSON.stringify({
           userID: parseInt(userID, 10),
           projectId: project.id,
+          email: appEmail.trim(),
+          statementOfInterest: statement.trim(),
         }),
       });
       const data = await res.json();
@@ -74,6 +98,7 @@ function ProjectDetails() {
       if (res.ok) {
         setApplied(true);
         setConfirmMessage("Your application has been submitted successfully.");
+        setStatement("");
       } else {
         if (data.error?.includes("already applied")) {
           setApplied(true);
@@ -81,7 +106,11 @@ function ProjectDetails() {
           setConfirmMessage("You have already applied to this opportunity.");
           return;
         }
-        setError(data.error || "Failed to submit application.");
+        setError(
+          Array.isArray(data.eligibility?.reasons) && data.eligibility.reasons.length > 0
+            ? data.eligibility.reasons.join(" ")
+            : data.error || "Failed to submit application."
+        );
       }
     } catch {
       setError("Unable to connect. Please try again later.");
@@ -121,7 +150,7 @@ function ProjectDetails() {
         <section className="project-details-section">
           <h2 className="section-heading">Required Skills</h2>
           <div className="skills-list">
-            {project.skills.map((skill) => (
+            {(project.skills || []).map((skill) => (
               <span key={skill} className="skill-tag">
                 {skill}
               </span>
@@ -129,17 +158,62 @@ function ProjectDetails() {
           </div>
         </section>
 
-        <div className="project-details-footer">
-          {confirmMessage && (
-            <p className="apply-confirmation">{confirmMessage}</p>
+        <section className="project-details-section">
+          <h2 className="section-heading">Prerequisites</h2>
+          <ul>
+            {project.requiredGPA !== null && project.requiredGPA !== undefined && (
+              <li>Minimum GPA: {project.requiredGPA}</li>
+            )}
+            {assessmentRequired && (
+              <li>Minimum assessment score: {project.minAssessmentScore}%</li>
+            )}
+            {project.prerequisites && <li>{project.prerequisites}</li>}
+          </ul>
+          {project.eligibility?.missingSkills?.length > 0 && (
+            <p className="apply-error">Missing skills: {project.eligibility.missingSkills.join(", ")}</p>
           )}
+        </section>
+
+        <section className="project-details-section">
+          <h2 className="section-heading">Apply</h2>
+          <div className="apply-form">
+            <div className="input-group">
+              <label htmlFor="apply-email">Email</label>
+              <input
+                id="apply-email"
+                type="email"
+                value={appEmail}
+                onChange={(e) => setAppEmail(e.target.value)}
+                placeholder="you@university.edu"
+              />
+            </div>
+            <div className="input-group">
+              <label htmlFor="apply-statement">Statement of interest</label>
+              <textarea
+                id="apply-statement"
+                rows={5}
+                value={statement}
+                onChange={(e) => setStatement(e.target.value)}
+                placeholder="Briefly describe why you're interested and your relevant experience."
+              />
+            </div>
+          </div>
+        </section>
+
+        <div className="project-details-footer">
+          {shouldShowAssessmentButton && (
+            <button className="btn btn-outline" onClick={() => navigate(`/student/assessment/${project.id}`)}>
+              Take Assessment First
+            </button>
+          )}
+          {confirmMessage && <p className="apply-confirmation">{confirmMessage}</p>}
           {error && <p className="apply-error">{error}</p>}
           <button
             className={`btn apply-btn ${applied ? "applied" : ""}`}
             onClick={handleApply}
-            disabled={loading || applied}
+            disabled={loading || applied || !canApply}
           >
-            {loading ? "Submitting..." : applied ? "Applied" : "Apply"}
+            {loading ? "Submitting..." : applied ? "Applied" : canApply ? "Apply" : "Not Eligible Yet"}
           </button>
         </div>
       </div>

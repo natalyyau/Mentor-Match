@@ -26,6 +26,11 @@
   min-width: 160px;
 }
 
+.sort-label {
+  font-size: 14px;
+  color: #5f6b84;
+}
+
 .applications-table-wrapper {
   background: white;
   border: 1px solid #dcdfe4;
@@ -61,13 +66,21 @@
   color: #2f3e5c;
 }
 
+.student-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .student-name {
-  font-weight: 600;
-  color: #1a2b4c;
+  font-weight: 700;
+  color: #18243d;
 }
 
 .position-cell {
   max-width: 200px;
+  font-weight: 600;
+  color: #24324a;
 }
 
 .student-email {
@@ -98,54 +111,6 @@
   color: #5a6b85;
 }
 
-.link-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: 13px;
-  color: #1a2b4c;
-  text-decoration: underline;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.link-btn:hover {
-  color: #243a66;
-}
-
-.app-status-badge {
-  display: inline-block;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 0;
-}
-
-.app-status-badge.status-new {
-  background: #fff3e0;
-  color: #e65100;
-}
-
-.app-status-badge.status-review {
-  background: #e3f2fd;
-  color: #1565c0;
-}
-
-.app-status-badge.status-shortlisted {
-  background: #f3e5f5;
-  color: #6a1b9a;
-}
-
-.app-status-badge.status-accepted {
-  background: #e8f5e9;
-  color: #2e7d32;
-}
-
-.app-status-badge.status-rejected {
-  background: #ffebee;
-  color: #c62828;
-}
-
 .applicants-empty {
   background: white;
   border: 1px solid #dcdfe4;
@@ -153,6 +118,31 @@
   text-align: center;
   color: #5a6b85;
   font-size: 14px;
+}
+
+.assessment-score-badge {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #eef2f7;
+  color: #344054;
+}
+
+.assessment-score-badge.pass {
+  background: #e8f7ec;
+  color: #1f7a38;
+}
+
+.assessment-score-badge.fail {
+  background: #fdecec;
+  color: #b42318;
+}
+
+.assessment-score-badge.pending {
+  background: #fff4db;
+  color: #9a6700;
 }
 
 .skills-modal-overlay {
@@ -172,6 +162,10 @@
   max-width: 420px;
   width: 100%;
   padding: 28px;
+}
+
+.skills-modal.wide {
+  max-width: 900px;
 }
 
 .skills-modal-title {
@@ -196,4 +190,63 @@
 
 .skills-modal-close {
   width: 100%;
+}
+
+.modal-section-title {
+  margin-top: 18px;
+  margin-bottom: 10px;
+  color: #18243d;
+}
+
+.assessment-review-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.assessment-review-card {
+  border: 1px solid #dcdfe4;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fafbfd;
+}
+
+.assessment-review-question {
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #18243d;
+}
+
+.manual-grade-row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.manual-grade-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.manual-grade-field input,
+.manual-grade-field textarea {
+  border: 1px solid #d0d7e2;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  background: white;
+}
+
+@media (max-width: 720px) {
+  .faculty-app-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .manual-grade-row {
+    grid-template-columns: 1fr;
+  }
 }

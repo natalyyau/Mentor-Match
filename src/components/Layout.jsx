@@ -17,11 +17,18 @@ const FACULTY_NAV = [
 function Layout({ userRole: propRole, userName: propName }) {
   const location = useLocation();
   const path = location.pathname;
-  const userRole = propRole ?? (path.startsWith("/faculty") ? "faculty" : "student");
-  const userName = propName ?? (userRole === "faculty" ? "Sarah Smith" : "Tim Drake");
+
+  const savedRole = localStorage.getItem("role");
+  const savedName = localStorage.getItem("fullName");
+
+  const userRole = propRole ?? savedRole ?? (path.startsWith("/faculty") ? "faculty" : "student");
+  const userName = propName ?? savedName ?? "User";
   const navItems = userRole === "faculty" ? FACULTY_NAV : STUDENT_NAV;
 
-  const displayName = userRole === "faculty" ? (userName.includes("Dr.") ? userName : `Dr. ${userName}`) : userName;
+  const displayName =
+    userRole === "faculty"
+      ? userName.startsWith("Dr.") ? userName : `Dr. ${userName}`
+      : userName;
 
   return (
     <div className="dashboard-layout">
@@ -29,6 +36,7 @@ function Layout({ userRole: propRole, userName: propName }) {
         <Link to="/" className="sidebar-brand">
           Mentor Match
         </Link>
+
         <nav className="sidebar-nav">
           {navItems.map((item) => (
             <Link
@@ -40,10 +48,12 @@ function Layout({ userRole: propRole, userName: propName }) {
             </Link>
           ))}
         </nav>
+
         <div className="sidebar-user">
           <span className="user-name">{displayName}</span>
         </div>
       </aside>
+
       <main className="dashboard-main">
         <Outlet context={{ userRole, userName }} />
       </main>

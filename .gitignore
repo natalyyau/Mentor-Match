@@ -36,3 +36,7 @@ staticfiles/
 *.njsproj
 *.sln
 *.sw?
+/backend/.env
+__pycache__/
+*.pyc
+db.sqlite3
