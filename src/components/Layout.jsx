@@ -9,6 +9,7 @@ const STUDENT_NAV = [
 
 const FACULTY_NAV = [
   { path: "/faculty/dashboard", label: "Dashboard" },
+  { path: "/faculty/analytics", label: "Analytics" }, // Added this
   { path: "/faculty/create-posting", label: "Create Project" },
   { path: "/faculty/my-postings", label: "My Projects" },
   { path: "/faculty/applications", label: "Applicant List" },
@@ -33,10 +34,7 @@ function Layout({ userRole: propRole, userName: propName }) {
   return (
     <div className="dashboard-layout">
       <aside className="sidebar">
-        <Link to="/" className="sidebar-brand">
-          Mentor Match
-        </Link>
-
+        <Link to="/" className="sidebar-brand">Mentor Match</Link>
         <nav className="sidebar-nav">
           {navItems.map((item) => (
             <Link
@@ -48,12 +46,10 @@ function Layout({ userRole: propRole, userName: propName }) {
             </Link>
           ))}
         </nav>
-
         <div className="sidebar-user">
           <span className="user-name">{displayName}</span>
         </div>
       </aside>
-
       <main className="dashboard-main">
         <Outlet context={{ userRole, userName }} />
       </main>

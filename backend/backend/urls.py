@@ -3,8 +3,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-
-    # API routes
     path('api/', include('users.urls')),
-    path("dashboard/", include("dashboard.urls")),
+    path('api/dashboard/', include('dashboard.urls')), # Changed "dashboard/" to "api/dashboard/"
 ]

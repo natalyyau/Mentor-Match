@@ -10,6 +10,7 @@ import FacultyDashboard from "./pages/FacultyDashboard";
 import CreatePosting from "./pages/CreatePosting";
 import MyPostings from "./pages/MyPostings";
 import FacultyApplications from "./pages/FacultyApplications";
+import StatsDashboard from "./pages/StatsDashboard"; // Import the dashboard
 import ScrollToTop from "./components/ScrollToTop";
 import TakeAssessment from "./pages/TakeAssessment";
 import "./App.css";
@@ -18,7 +19,6 @@ function App() {
   return (
     <>
       <ScrollToTop />
-
       <Routes>
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
@@ -36,6 +36,7 @@ function App() {
         <Route path="/faculty" element={<Layout />}>
           <Route index element={<Navigate to="/faculty/dashboard" replace />} />
           <Route path="dashboard" element={<FacultyDashboard />} />
+          <Route path="analytics" element={<StatsDashboard />} /> {/* Added this */}
           <Route path="create-posting" element={<CreatePosting />} />
           <Route path="my-postings" element={<MyPostings />} />
           <Route path="applications" element={<FacultyApplications />} />
