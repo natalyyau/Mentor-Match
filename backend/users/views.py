@@ -18,6 +18,11 @@ from .models import (
     StudentSkills,
     Students,
     Users,
+    Assessments,
+    AssessmentAttempts,
+    Questions,
+    Choices,
+    StudentAnswers,
 )
 
 
@@ -239,12 +244,10 @@ def _evaluate_posting_prerequisites(student: Students, posting: ResearchPostings
             reasons.append("This opportunity requires an assessment, but none is available yet.")
         elif not attempt:
             checks["assessmentMet"] = False
-            reasons.append(
-                f"You must complete the assessment and score at least {posting.minAssessmentScore}% before applying."
-            )
+            reasons.append("You must complete the assessment before applying.")
         elif attempt.gradingStatus == "pending":
-            checks["assessmentMet"] = False
-            reasons.append("Your assessment is still waiting for manual review.")
+            checks["assessmentMet"] = True
+            reasons.append("Assessment submitted and waiting for faculty review.")
         elif attempt.score is None or float(attempt.score) < float(posting.minAssessmentScore):
             checks["assessmentMet"] = False
             latest_score = float(attempt.score) if attempt.score is not None else 0
@@ -593,12 +596,15 @@ def apply_to_opportunity(request):
     email = _clean_text(data.get("email") or student.userID.email)
     statement = _clean_text(data.get("statementOfInterest"))
 
+    assessment, attempt = _get_latest_assessment_attempt(student, posting)
+    pending_manual_review = bool(attempt and attempt.gradingStatus == "pending")
+
     app = Applications.objects.create(
         studentID=student,
         postingID=posting,
         submissionDate=date.today(),
-        status="New",
-        prerequisitesVerified=True,
+        status="Under Review" if pending_manual_review else "New",
+        prerequisitesVerified=False if pending_manual_review else True,
         email=email,
         statementOfInterest=statement,
     )
@@ -1047,6 +1053,35 @@ def grade_assessment_attempt(request):
         answer.save()
 
     _recalculate_attempt(attempt)
+
+    posting = attempt.assessmentID.postingID
+    student = attempt.studentID
+
+    application = Applications.objects.filter(
+        studentID=student,
+        postingID=posting
+    ).first()
+
+    if application:
+        if posting.minAssessmentScore is None:
+            application.prerequisitesVerified = True
+            if application.status == "New":
+                application.status = "Under Review"
+        else:
+            meets_score = (
+                attempt.score is not None and
+                float(attempt.score) >= float(posting.minAssessmentScore)
+            )
+
+            if meets_score:
+                application.prerequisitesVerified = True
+                if application.status in ["New", "Under Review"]:
+                    application.status = "Under Review"
+            else:
+                application.prerequisitesVerified = False
+                application.status = "Rejected"
+
+        application.save()
 
     return Response({
         "message": "Assessment graded successfully",

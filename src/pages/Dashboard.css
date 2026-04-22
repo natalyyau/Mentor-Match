@@ -154,3 +154,15 @@
     grid-template-columns: 1fr;
   }
 }
+
+.assessment-score-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #eef2fa;
+  color: #4a6fa5;
+}
+.assessment-score-badge.pass { background: #d4edda; color: #1a7a3c; }
+.assessment-score-badge.fail { background: #fde8e8; color: #c0392b; }

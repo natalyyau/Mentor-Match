@@ -1,4 +1,5 @@
 from django.urls import path
+from . import views
 from .views import (
     apply_to_opportunity,
     check_applied,

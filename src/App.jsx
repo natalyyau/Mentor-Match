@@ -11,6 +11,7 @@ import CreatePosting from "./pages/CreatePosting";
 import MyPostings from "./pages/MyPostings";
 import FacultyApplications from "./pages/FacultyApplications";
 import ScrollToTop from "./components/ScrollToTop";
+import TakeAssessment from "./pages/TakeAssessment";
 import "./App.css";
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
           <Route path="browse" element={<BrowseOpportunities />} />
           <Route path="project/:id" element={<ProjectDetails />} />
           <Route path="applications" element={<MyApplications />} />
+          <Route path="assessment/:postingId" element={<TakeAssessment />} />
         </Route>
 
         <Route path="/faculty" element={<Layout />}>
